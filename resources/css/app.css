@@ -1,0 +1,114 @@
+@import 'tailwindcss';
+
+@import 'tw-animate-css';
+
+@source '../views';
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@theme {
+    --font-sans:
+        'Poppins', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --radius-lg: var(--radius);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-sm: calc(var(--radius) - 4px);
+
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+
+    --color-card: var(--card);
+    --color-card-foreground: var(--card-foreground);
+
+    --color-popover: var(--popover);
+    --color-popover-foreground: var(--popover-foreground);
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+
+    --color-secondary: var(--secondary);
+    --color-secondary-foreground: var(--secondary-foreground);
+
+    --color-muted: var(--muted);
+    --color-muted-foreground: var(--muted-foreground);
+
+    --color-accent: var(--accent);
+    --color-accent-foreground: var(--accent-foreground);
+
+    --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
+
+    --color-border: var(--border);
+    --color-input: var(--input);
+    --color-ring: var(--ring);
+
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
+
+    --color-sidebar: var(--sidebar);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-ring: var(--sidebar-ring);
+
+    /* AvanaHR brand tokens */
+    --color-brand-navy: #1b2b5e;
+    --color-brand-blue: #4a6bd8;
+    --color-brand-soft: #7c97e8;
+}
+
+/*
+ * AvanaHR palette — light mode only (per Design System 05 B1).
+ * Primary blue #4A6BD8, navy #1B2B5E, surface #F6F8FC.
+ */
+:root {
+    --background: #f6f8fc;
+    --foreground: #1b2b5e;
+    --card: #ffffff;
+    --card-foreground: #1b2b5e;
+    --popover: #ffffff;
+    --popover-foreground: #1b2b5e;
+    --primary: #4a6bd8;
+    --primary-foreground: #ffffff;
+    --secondary: #eaf0fc;
+    --secondary-foreground: #1b2b5e;
+    --muted: #f1f4fa;
+    --muted-foreground: #64748b;
+    --accent: #eaf0fc;
+    --accent-foreground: #1b2b5e;
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: #e4e9f2;
+    --input: #e4e9f2;
+    --ring: #4a6bd8;
+    --chart-1: #4a6bd8;
+    --chart-2: #1b2b5e;
+    --chart-3: #7c97e8;
+    --chart-4: #f59e0b;
+    --chart-5: #16a34a;
+    --radius: 0.625rem;
+    --sidebar: #1b2b5e;
+    --sidebar-foreground: #e7ecf7;
+    --sidebar-primary: #4a6bd8;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #26408c;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #2b3d6b;
+    --sidebar-ring: #4a6bd8;
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
