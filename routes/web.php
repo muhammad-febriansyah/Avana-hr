@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalFlowController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CustomFieldController;
@@ -183,6 +184,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('leave-types/{leaveType}', [LeaveTypeController::class, 'update'])->name('leave-types.update');
         Route::delete('leave-types/{leaveType}', [LeaveTypeController::class, 'destroy'])->name('leave-types.destroy');
     });
+
+    // Kehadiran (Fase 2.3) — admin views; events arrive from the face-recognition app.
+    Route::get('attendance', [AttendanceController::class, 'index'])
+        ->middleware('can:attendance.view')
+        ->name('attendance.index');
+    Route::post('attendance/rebuild', [AttendanceController::class, 'rebuild'])
+        ->middleware('can:attendance.manage')
+        ->name('attendance.rebuild');
 
     Route::get('roles', [RoleController::class, 'index'])
         ->middleware('can:roles.view')

@@ -13,3 +13,4 @@ Schedule::command('contracts:remind')->dailyAt('07:00');
 Schedule::command('movements:apply')->dailyAt('01:00');
 Schedule::command('terminations:apply')->dailyAt('02:00');
 Schedule::command('leave:accrue')->yearlyOn(1, 1, '00:30');
+Schedule::command('attendance:rebuild')->dailyAt('03:00');

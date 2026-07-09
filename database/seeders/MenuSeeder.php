@@ -75,7 +75,7 @@ class MenuSeeder extends Seeder
             ['code' => 'leave-types', 'parent' => 'leave', 'label' => 'Jenis Cuti', 'route' => 'leave-types.index', 'permission' => 'leave.view', 'sort' => 3],
 
             // Attendance submenu
-            ['code' => 'attendance.monitoring', 'parent' => 'attendance', 'label' => 'Monitoring Kehadiran', 'permission' => 'attendance.view', 'sort' => 1],
+            ['code' => 'attendance.monitoring', 'parent' => 'attendance', 'label' => 'Monitoring Kehadiran', 'route' => 'attendance.index', 'permission' => 'attendance.view', 'sort' => 1],
             ['code' => 'attendance.correction', 'parent' => 'attendance', 'label' => 'Koreksi Kehadiran', 'permission' => 'attendance.correct', 'sort' => 2],
 
             // Payroll submenu
