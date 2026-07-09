@@ -13,10 +13,12 @@ use App\Http\Controllers\EmployeeImportController;
 use App\Http\Controllers\EmployeeMovementController;
 use App\Http\Controllers\EmployeeTerminationController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ShiftController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -122,6 +124,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
         Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
         Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
+    });
+
+    // Shift & Jadwal (Fase 2.1)
+    Route::get('shifts', [ShiftController::class, 'index'])
+        ->middleware('can:shift.view')
+        ->name('shifts.index');
+    Route::middleware('can:shift.manage')->group(function () {
+        Route::post('shifts', [ShiftController::class, 'store'])->name('shifts.store');
+        Route::put('shifts/{shift}', [ShiftController::class, 'update'])->name('shifts.update');
+        Route::delete('shifts/{shift}', [ShiftController::class, 'destroy'])->name('shifts.destroy');
+    });
+
+    Route::get('holidays', [HolidayController::class, 'index'])
+        ->middleware('can:shift.view')
+        ->name('holidays.index');
+    Route::middleware('can:shift.manage')->group(function () {
+        Route::post('holidays', [HolidayController::class, 'store'])->name('holidays.store');
+        Route::delete('holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
     });
 
     Route::get('roles', [RoleController::class, 'index'])
