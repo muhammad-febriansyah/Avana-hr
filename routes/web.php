@@ -5,6 +5,7 @@ use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CustomFieldController;
+use App\Http\Controllers\EmployeeChangeRequestController;
 use App\Http\Controllers\EmployeeContractController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeImportController;
@@ -77,10 +78,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->scopeBindings()
         ->name('employees.contracts.download');
 
-    // Employee lifecycle: movements (via approval) — managed from the detail page.
-    Route::post('employees/{employee}/movements', [EmployeeMovementController::class, 'store'])
-        ->middleware('can:employees.update')
-        ->name('employees.movements.store');
+    // Employee lifecycle: movements + data change requests (both via approval).
+    Route::middleware('can:employees.update')->group(function () {
+        Route::post('employees/{employee}/movements', [EmployeeMovementController::class, 'store'])->name('employees.movements.store');
+        Route::post('employees/{employee}/change-requests', [EmployeeChangeRequestController::class, 'store'])->name('employees.change-requests.store');
+    });
 
     // Keep the wildcard show route last so /employees/create resolves first.
     Route::get('employees/{employee}', [EmployeeController::class, 'show'])

@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\CustomFieldDefinition;
 use App\Models\CustomFieldValue;
 use App\Models\Employee;
+use App\Models\EmployeeChangeRequest;
 use App\Models\EmployeeContract;
 use App\Models\EmployeeMovement;
 use App\Models\Grade;
@@ -147,6 +148,21 @@ class EmployeeController extends Controller
                 'grades' => Grade::orderBy('code')->get(['id', 'code', 'name']),
                 'orgUnits' => OrgUnit::orderBy('name')->get(['id', 'name']),
                 'branches' => Branch::orderBy('name')->get(['id', 'name']),
+            ],
+            'changeRequests' => $employee->changeRequests()->get()->map(fn (EmployeeChangeRequest $request): array => [
+                'id' => $request->id,
+                'status' => $request->status,
+                'fields' => array_keys($request->changes),
+                'created_at' => $request->created_at?->toIso8601String(),
+            ])->all(),
+            'editable' => [
+                'full_name' => $employee->full_name,
+                'email' => $employee->email,
+                'phone' => $employee->phone,
+                'marital_status' => $employee->marital_status,
+                'ptkp_status' => $employee->ptkp_status,
+                'bank_name' => $employee->bank_name,
+                'bank_account_name' => $employee->bank_account_name,
             ],
             'audits' => $audits,
         ]);

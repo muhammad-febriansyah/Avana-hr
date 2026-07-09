@@ -43,6 +43,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { edit, index } from '@/routes/employees';
+import { store as storeChangeRequest } from '@/routes/employees/change-requests';
 import {
     destroy as destroyContract,
     download as downloadContract,
@@ -119,12 +120,31 @@ type MovementOptions = {
     branches: Option[];
 };
 
+type ChangeRequest = {
+    id: number;
+    status: string;
+    fields: string[];
+    created_at: string | null;
+};
+
+type Editable = {
+    full_name: string;
+    email: string | null;
+    phone: string | null;
+    marital_status: string | null;
+    ptkp_status: string | null;
+    bank_name: string | null;
+    bank_account_name: string | null;
+};
+
 type Props = {
     employee: Employee;
     customFields: CustomField[];
     contracts: Contract[];
     movements: Movement[];
     movementOptions: MovementOptions;
+    changeRequests: ChangeRequest[];
+    editable: Editable;
     audits: Audit[];
 };
 
@@ -133,9 +153,35 @@ type Tab =
     | 'kepegawaian'
     | 'kontrak'
     | 'mutasi'
+    | 'perubahan'
     | 'payroll'
     | 'lainnya'
     | 'riwayat';
+
+const CR_STATUS_LABELS: Record<string, string> = {
+    pending: 'Menunggu',
+    approved: 'Disetujui',
+    rejected: 'Ditolak',
+};
+
+const CR_FIELD_LABELS: Record<string, string> = {
+    full_name: 'Nama Lengkap',
+    email: 'Email',
+    phone: 'Telepon',
+    marital_status: 'Status Nikah',
+    ptkp_status: 'PTKP',
+    bank_name: 'Bank',
+    bank_account_name: 'Pemilik Rekening',
+};
+
+const MARITAL_OPTIONS = [
+    { value: 'single', label: 'Belum Menikah' },
+    { value: 'married', label: 'Menikah' },
+    { value: 'divorced', label: 'Cerai' },
+    { value: 'widowed', label: 'Janda/Duda' },
+];
+
+const PTKP_VALUES = ['TK0', 'TK1', 'TK2', 'TK3', 'K0', 'K1', 'K2', 'K3'];
 
 const MOVEMENT_TYPE_LABELS: Record<string, string> = {
     mutation: 'Mutasi',
@@ -188,6 +234,8 @@ export default function EmployeeShow({
     contracts,
     movements,
     movementOptions,
+    changeRequests,
+    editable,
     audits,
 }: Props) {
     const { can } = usePermissions();
@@ -195,6 +243,7 @@ export default function EmployeeShow({
     const [editing, setEditing] = useState<Contract | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
     const [movementOpen, setMovementOpen] = useState(false);
+    const [changeOpen, setChangeOpen] = useState(false);
     const canManage = can('employees.update');
 
     const optionName = (
@@ -247,6 +296,7 @@ export default function EmployeeShow({
         { key: 'kepegawaian', label: 'Kepegawaian' },
         { key: 'kontrak', label: 'Kontrak' },
         { key: 'mutasi', label: 'Mutasi' },
+        { key: 'perubahan', label: 'Perubahan' },
         { key: 'payroll', label: 'Payroll' },
         { key: 'lainnya', label: 'Kehadiran & Cuti' },
         { key: 'riwayat', label: 'Riwayat' },
@@ -567,6 +617,78 @@ export default function EmployeeShow({
                         </div>
                     )}
 
+                    {tab === 'perubahan' && (
+                        <div className="flex flex-col gap-4">
+                            {canManage && (
+                                <div className="flex justify-end">
+                                    <Button onClick={() => setChangeOpen(true)}>
+                                        <Pencil className="size-4" />
+                                        Ajukan Perubahan Data
+                                    </Button>
+                                </div>
+                            )}
+
+                            {changeRequests.length === 0 ? (
+                                <EmptyState
+                                    icon={Pencil}
+                                    title="Belum ada pengajuan perubahan"
+                                    description="Ajukan perubahan data non-struktural melalui maker-checker."
+                                />
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Field</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Diajukan</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {changeRequests.map((cr) => (
+                                            <TableRow key={cr.id}>
+                                                <TableCell>
+                                                    {cr.fields
+                                                        .map(
+                                                            (f) =>
+                                                                CR_FIELD_LABELS[
+                                                                    f
+                                                                ] ?? f,
+                                                        )
+                                                        .join(', ')}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <StatusBadge
+                                                        status={
+                                                            cr.status ===
+                                                            'approved'
+                                                                ? 'approved'
+                                                                : cr.status ===
+                                                                    'rejected'
+                                                                  ? 'rejected'
+                                                                  : 'pending'
+                                                        }
+                                                        label={
+                                                            CR_STATUS_LABELS[
+                                                                cr.status
+                                                            ] ?? cr.status
+                                                        }
+                                                    />
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {cr.created_at
+                                                        ? formatDateTime(
+                                                              cr.created_at,
+                                                          )
+                                                        : '-'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </div>
+                    )}
+
                     {tab === 'payroll' && (
                         <div className="max-w-2xl">
                             <Row label="Bank" value={employee.bank_name} />
@@ -636,6 +758,15 @@ export default function EmployeeShow({
                     onOpenChange={setMovementOpen}
                     employeeId={employee.id}
                     options={movementOptions}
+                />
+            )}
+
+            {canManage && (
+                <ChangeRequestDialog
+                    open={changeOpen}
+                    onOpenChange={setChangeOpen}
+                    employeeId={employee.id}
+                    editable={editable}
                 />
             )}
         </div>
@@ -1010,6 +1141,127 @@ function MovementDialog({
                             {form.errors.type}
                         </p>
                     )}
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Batal
+                    </Button>
+                    <Button onClick={submit} disabled={form.processing}>
+                        Ajukan
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ChangeRequestDialog({
+    open,
+    onOpenChange,
+    employeeId,
+    editable,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    employeeId: number;
+    editable: Editable;
+}) {
+    const form = useForm({
+        full_name: editable.full_name ?? '',
+        email: editable.email ?? '',
+        phone: editable.phone ?? '',
+        marital_status: editable.marital_status ?? NONE,
+        ptkp_status: editable.ptkp_status ?? NONE,
+        bank_name: editable.bank_name ?? '',
+        bank_account_name: editable.bank_account_name ?? '',
+    });
+
+    const submit = () => {
+        form.transform((d) => ({
+            ...d,
+            marital_status: d.marital_status === NONE ? '' : d.marital_status,
+            ptkp_status: d.ptkp_status === NONE ? '' : d.ptkp_status,
+        }));
+
+        form.post(storeChangeRequest(employeeId).url, {
+            preserveScroll: true,
+            onSuccess: () => onOpenChange(false),
+        });
+    };
+
+    const text = (label: string, key: 'full_name' | 'email' | 'phone' | 'bank_name' | 'bank_account_name') => (
+        <div className="grid gap-2">
+            <Label htmlFor={`cr-${key}`}>{label}</Label>
+            <Input
+                id={`cr-${key}`}
+                value={form.data[key]}
+                onChange={(e) => form.setData(key, e.target.value)}
+            />
+            {form.errors[key] && (
+                <p className="text-sm text-red-600">{form.errors[key]}</p>
+            )}
+        </div>
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ajukan Perubahan Data</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4">
+                    {text('Nama Lengkap', 'full_name')}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {text('Email', 'email')}
+                        {text('Telepon', 'phone')}
+                        <div className="grid gap-2">
+                            <Label>Status Nikah</Label>
+                            <Select
+                                value={form.data.marital_status}
+                                onValueChange={(v) =>
+                                    form.setData('marital_status', v)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={NONE}>-</SelectItem>
+                                    {MARITAL_OPTIONS.map((o) => (
+                                        <SelectItem key={o.value} value={o.value}>
+                                            {o.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid gap-2">
+                            <Label>PTKP</Label>
+                            <Select
+                                value={form.data.ptkp_status}
+                                onValueChange={(v) =>
+                                    form.setData('ptkp_status', v)
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value={NONE}>-</SelectItem>
+                                    {PTKP_VALUES.map((v) => (
+                                        <SelectItem key={v} value={v}>
+                                            {v}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        {text('Bank', 'bank_name')}
+                        {text('Pemilik Rekening', 'bank_account_name')}
+                    </div>
                 </div>
                 <DialogFooter>
                     <Button

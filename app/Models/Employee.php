@@ -131,6 +131,14 @@ class Employee extends Model
     }
 
     /**
+     * @return HasMany<EmployeeChangeRequest, $this>
+     */
+    public function changeRequests(): HasMany
+    {
+        return $this->hasMany(EmployeeChangeRequest::class)->latest('id');
+    }
+
+    /**
      * Flag one branch assignment as primary, demoting any other.
      */
     public function setPrimaryBranch(int $branchId): void

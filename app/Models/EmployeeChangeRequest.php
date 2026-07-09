@@ -51,6 +51,14 @@ class EmployeeChangeRequest extends Model implements Approvable
 
     public function onApprovalApproved(): void
     {
+        $employee = $this->employee()->first();
+
+        // NOTE: `changes` collides with Eloquent's internal dirty-tracking
+        // property, so the JSON column must be read via getAttribute().
+        if ($employee !== null) {
+            $employee->update($this->getAttribute('changes'));
+        }
+
         $this->update(['status' => 'approved', 'applied_at' => now()]);
     }
 
