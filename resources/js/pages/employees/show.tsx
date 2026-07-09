@@ -1,5 +1,12 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Download, FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import {
+    ArrowRightLeft,
+    Download,
+    FileText,
+    Pencil,
+    Plus,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -42,6 +49,7 @@ import {
     store as storeContract,
     update as updateContract,
 } from '@/routes/employees/contracts';
+import { store as storeMovement } from '@/routes/employees/movements';
 
 type Employee = {
     id: number;
@@ -89,14 +97,58 @@ type Audit = {
 
 type CustomField = { label: string; value: string | null };
 
+type Option = { id: number; name: string };
+type GradeOption = { id: number; code: string; name: string };
+
+type Movement = {
+    id: number;
+    type: string;
+    to_position_id: number | null;
+    to_org_unit_id: number | null;
+    to_grade_id: number | null;
+    to_branch_id: number | null;
+    effective_date: string;
+    status: string;
+    note: string | null;
+};
+
+type MovementOptions = {
+    positions: Option[];
+    grades: GradeOption[];
+    orgUnits: Option[];
+    branches: Option[];
+};
+
 type Props = {
     employee: Employee;
     customFields: CustomField[];
     contracts: Contract[];
+    movements: Movement[];
+    movementOptions: MovementOptions;
     audits: Audit[];
 };
 
-type Tab = 'profil' | 'kepegawaian' | 'kontrak' | 'payroll' | 'lainnya' | 'riwayat';
+type Tab =
+    | 'profil'
+    | 'kepegawaian'
+    | 'kontrak'
+    | 'mutasi'
+    | 'payroll'
+    | 'lainnya'
+    | 'riwayat';
+
+const MOVEMENT_TYPE_LABELS: Record<string, string> = {
+    mutation: 'Mutasi',
+    promotion: 'Promosi',
+    demotion: 'Demosi',
+};
+
+const MOVEMENT_STATUS_LABELS: Record<string, string> = {
+    pending: 'Menunggu',
+    approved: 'Disetujui',
+    rejected: 'Ditolak',
+    applied: 'Diterapkan',
+};
 
 const TYPE_LABELS: Record<string, string> = {
     pkwt: 'PKWT',
@@ -134,13 +186,52 @@ export default function EmployeeShow({
     employee,
     customFields,
     contracts,
+    movements,
+    movementOptions,
     audits,
 }: Props) {
     const { can } = usePermissions();
     const [tab, setTab] = useState<Tab>('profil');
     const [editing, setEditing] = useState<Contract | null>(null);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [movementOpen, setMovementOpen] = useState(false);
     const canManage = can('employees.update');
+
+    const optionName = (
+        list: { id: number; name?: string; code?: string }[],
+        id: number | null,
+        key: 'name' | 'code' = 'name',
+    ) => (id === null ? null : (list.find((o) => o.id === id)?.[key] ?? `#${id}`));
+
+    const movementSummary = (m: Movement) => {
+        const parts: string[] = [];
+
+        if (m.to_position_id !== null) {
+            parts.push(
+                `Posisi: ${optionName(movementOptions.positions, m.to_position_id)}`,
+            );
+        }
+
+        if (m.to_org_unit_id !== null) {
+            parts.push(
+                `Unit: ${optionName(movementOptions.orgUnits, m.to_org_unit_id)}`,
+            );
+        }
+
+        if (m.to_grade_id !== null) {
+            parts.push(
+                `Grade: ${optionName(movementOptions.grades, m.to_grade_id, 'code')}`,
+            );
+        }
+
+        if (m.to_branch_id !== null) {
+            parts.push(
+                `Cabang: ${optionName(movementOptions.branches, m.to_branch_id)}`,
+            );
+        }
+
+        return parts.join(', ') || '-';
+    };
 
     const openCreate = () => {
         setEditing(null);
@@ -155,6 +246,7 @@ export default function EmployeeShow({
         { key: 'profil', label: 'Profil' },
         { key: 'kepegawaian', label: 'Kepegawaian' },
         { key: 'kontrak', label: 'Kontrak' },
+        { key: 'mutasi', label: 'Mutasi' },
         { key: 'payroll', label: 'Payroll' },
         { key: 'lainnya', label: 'Kehadiran & Cuti' },
         { key: 'riwayat', label: 'Riwayat' },
@@ -416,6 +508,65 @@ export default function EmployeeShow({
                         </div>
                     )}
 
+                    {tab === 'mutasi' && (
+                        <div className="flex flex-col gap-4">
+                            {canManage && (
+                                <div className="flex justify-end">
+                                    <Button onClick={() => setMovementOpen(true)}>
+                                        <ArrowRightLeft className="size-4" />
+                                        Ajukan Pergerakan
+                                    </Button>
+                                </div>
+                            )}
+
+                            {movements.length === 0 ? (
+                                <EmptyState
+                                    icon={ArrowRightLeft}
+                                    title="Belum ada pergerakan"
+                                    description="Ajukan mutasi, promosi, atau demosi untuk karyawan ini."
+                                />
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Jenis</TableHead>
+                                            <TableHead>Tujuan</TableHead>
+                                            <TableHead>Efektif</TableHead>
+                                            <TableHead>Status</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {movements.map((m) => (
+                                            <TableRow key={m.id}>
+                                                <TableCell className="font-medium">
+                                                    {MOVEMENT_TYPE_LABELS[
+                                                        m.type
+                                                    ] ?? m.type}
+                                                </TableCell>
+                                                <TableCell className="text-muted-foreground">
+                                                    {movementSummary(m)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {m.effective_date}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <StatusBadge
+                                                        status={m.status}
+                                                        label={
+                                                            MOVEMENT_STATUS_LABELS[
+                                                                m.status
+                                                            ] ?? m.status
+                                                        }
+                                                    />
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </div>
+                    )}
+
                     {tab === 'payroll' && (
                         <div className="max-w-2xl">
                             <Row label="Bank" value={employee.bank_name} />
@@ -476,6 +627,15 @@ export default function EmployeeShow({
                     onOpenChange={setDialogOpen}
                     employeeId={employee.id}
                     editing={editing}
+                />
+            )}
+
+            {canManage && (
+                <MovementDialog
+                    open={movementOpen}
+                    onOpenChange={setMovementOpen}
+                    employeeId={employee.id}
+                    options={movementOptions}
                 />
             )}
         </div>
@@ -671,6 +831,195 @@ function ContractDialog({
                     </Button>
                     <Button onClick={submit} disabled={form.processing}>
                         Simpan
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+const NONE = '__none__';
+
+function MovementDialog({
+    open,
+    onOpenChange,
+    employeeId,
+    options,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    employeeId: number;
+    options: MovementOptions;
+}) {
+    const form = useForm<{
+        type: string;
+        to_position_id: string;
+        to_org_unit_id: string;
+        to_grade_id: string;
+        to_branch_id: string;
+        effective_date: string;
+        note: string;
+    }>({
+        type: 'mutation',
+        to_position_id: NONE,
+        to_org_unit_id: NONE,
+        to_grade_id: NONE,
+        to_branch_id: NONE,
+        effective_date: '',
+        note: '',
+    });
+
+    const submit = () => {
+        form.transform((d) => ({
+            type: d.type,
+            to_position_id:
+                d.to_position_id === NONE ? null : Number(d.to_position_id),
+            to_org_unit_id:
+                d.to_org_unit_id === NONE ? null : Number(d.to_org_unit_id),
+            to_grade_id: d.to_grade_id === NONE ? null : Number(d.to_grade_id),
+            to_branch_id:
+                d.to_branch_id === NONE ? null : Number(d.to_branch_id),
+            effective_date: d.effective_date,
+            note: d.note || null,
+        }));
+
+        form.post(storeMovement(employeeId).url, {
+            preserveScroll: true,
+            onSuccess: () => {
+                form.reset();
+                onOpenChange(false);
+            },
+        });
+    };
+
+    const idField = (
+        label: string,
+        key: 'to_position_id' | 'to_org_unit_id' | 'to_grade_id' | 'to_branch_id',
+        items: { id: number; label: string }[],
+    ) => (
+        <div className="grid gap-2">
+            <Label>{label}</Label>
+            <Select
+                value={form.data[key]}
+                onValueChange={(v) => form.setData(key, v)}
+            >
+                <SelectTrigger>
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value={NONE}>Tidak diubah</SelectItem>
+                    {items.map((o) => (
+                        <SelectItem key={o.id} value={String(o.id)}>
+                            {o.label}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ajukan Pergerakan</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label>Jenis</Label>
+                        <Select
+                            value={form.data.type}
+                            onValueChange={(v) => form.setData('type', v)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(MOVEMENT_TYPE_LABELS).map(
+                                    ([value, label]) => (
+                                        <SelectItem key={value} value={value}>
+                                            {label}
+                                        </SelectItem>
+                                    ),
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        {idField(
+                            'Posisi Baru',
+                            'to_position_id',
+                            options.positions.map((p) => ({
+                                id: p.id,
+                                label: p.name,
+                            })),
+                        )}
+                        {idField(
+                            'Unit Baru',
+                            'to_org_unit_id',
+                            options.orgUnits.map((u) => ({
+                                id: u.id,
+                                label: u.name,
+                            })),
+                        )}
+                        {idField(
+                            'Grade Baru',
+                            'to_grade_id',
+                            options.grades.map((g) => ({
+                                id: g.id,
+                                label: `${g.code} — ${g.name}`,
+                            })),
+                        )}
+                        {idField(
+                            'Cabang Baru',
+                            'to_branch_id',
+                            options.branches.map((b) => ({
+                                id: b.id,
+                                label: b.name,
+                            })),
+                        )}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="mv-date">Tanggal Efektif</Label>
+                        <Input
+                            id="mv-date"
+                            type="date"
+                            value={form.data.effective_date}
+                            onChange={(e) =>
+                                form.setData('effective_date', e.target.value)
+                            }
+                        />
+                        {form.errors.effective_date && (
+                            <p className="text-sm text-red-600">
+                                {form.errors.effective_date}
+                            </p>
+                        )}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="mv-note">Catatan</Label>
+                        <Input
+                            id="mv-note"
+                            value={form.data.note}
+                            onChange={(e) =>
+                                form.setData('note', e.target.value)
+                            }
+                        />
+                    </div>
+                    {form.errors.type && (
+                        <p className="text-sm text-red-600">
+                            {form.errors.type}
+                        </p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Batal
+                    </Button>
+                    <Button onClick={submit} disabled={form.processing}>
+                        Ajukan
                     </Button>
                 </DialogFooter>
             </DialogContent>

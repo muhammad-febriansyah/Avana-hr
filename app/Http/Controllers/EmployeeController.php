@@ -8,6 +8,7 @@ use App\Models\CustomFieldDefinition;
 use App\Models\CustomFieldValue;
 use App\Models\Employee;
 use App\Models\EmployeeContract;
+use App\Models\EmployeeMovement;
 use App\Models\Grade;
 use App\Models\OrgUnit;
 use App\Models\Position;
@@ -130,6 +131,23 @@ class EmployeeController extends Controller
                 'status' => $contract->status,
                 'has_file' => $contract->file_path !== null,
             ])->all(),
+            'movements' => $employee->movements()->get()->map(fn (EmployeeMovement $movement): array => [
+                'id' => $movement->id,
+                'type' => $movement->type,
+                'to_position_id' => $movement->to_position_id,
+                'to_org_unit_id' => $movement->to_org_unit_id,
+                'to_grade_id' => $movement->to_grade_id,
+                'to_branch_id' => $movement->to_branch_id,
+                'effective_date' => $movement->effective_date->toDateString(),
+                'status' => $movement->status,
+                'note' => $movement->note,
+            ])->all(),
+            'movementOptions' => [
+                'positions' => Position::orderBy('name')->get(['id', 'name']),
+                'grades' => Grade::orderBy('code')->get(['id', 'code', 'name']),
+                'orgUnits' => OrgUnit::orderBy('name')->get(['id', 'name']),
+                'branches' => Branch::orderBy('name')->get(['id', 'name']),
+            ],
             'audits' => $audits,
         ]);
     }
@@ -183,11 +201,7 @@ class EmployeeController extends Controller
             return;
         }
 
-        $employee->branchAssignments()->where('branch_id', '!=', $branchId)->update(['is_primary' => false]);
-        $employee->branchAssignments()->updateOrCreate(
-            ['branch_id' => $branchId],
-            ['is_primary' => true],
-        );
+        $employee->setPrimaryBranch($branchId);
     }
 
     /**

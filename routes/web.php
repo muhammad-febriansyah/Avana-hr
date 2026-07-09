@@ -8,6 +8,7 @@ use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\EmployeeContractController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeImportController;
+use App\Http\Controllers\EmployeeMovementController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
@@ -75,6 +76,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:employees.view')
         ->scopeBindings()
         ->name('employees.contracts.download');
+
+    // Employee lifecycle: movements (via approval) — managed from the detail page.
+    Route::post('employees/{employee}/movements', [EmployeeMovementController::class, 'store'])
+        ->middleware('can:employees.update')
+        ->name('employees.movements.store');
 
     // Keep the wildcard show route last so /employees/create resolves first.
     Route::get('employees/{employee}', [EmployeeController::class, 'show'])

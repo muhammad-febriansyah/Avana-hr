@@ -123,6 +123,26 @@ class Employee extends Model
     }
 
     /**
+     * @return HasMany<EmployeeMovement, $this>
+     */
+    public function movements(): HasMany
+    {
+        return $this->hasMany(EmployeeMovement::class)->latest('effective_date');
+    }
+
+    /**
+     * Flag one branch assignment as primary, demoting any other.
+     */
+    public function setPrimaryBranch(int $branchId): void
+    {
+        $this->branchAssignments()->where('branch_id', '!=', $branchId)->update(['is_primary' => false]);
+        $this->branchAssignments()->updateOrCreate(
+            ['branch_id' => $branchId],
+            ['is_primary' => true],
+        );
+    }
+
+    /**
      * @return HasOne<User, $this>
      */
     public function user(): HasOne

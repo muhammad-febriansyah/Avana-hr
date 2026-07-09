@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('approvals:escalate')->hourly();
 Schedule::command('contracts:remind')->dailyAt('07:00');
+Schedule::command('movements:apply')->dailyAt('01:00');
