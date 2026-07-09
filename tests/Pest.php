@@ -1,6 +1,10 @@
 <?php
 
+use App\Actions\Tenant\ProvisionTenantDefaults;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /*
@@ -47,4 +51,24 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Provision a tenant with its default roles and return a user holding $role
+ * (or no role when null). Sets the spatie team context to the tenant.
+ */
+function makeTenantUser(Tenant $tenant, ?string $role = null): User
+{
+    app(ProvisionTenantDefaults::class)->handle($tenant);
+
+    $registrar = app(PermissionRegistrar::class);
+    $registrar->setPermissionsTeamId($tenant->id);
+
+    $user = User::factory()->create(['tenant_id' => $tenant->id]);
+
+    if ($role !== null) {
+        $user->assignRole($role);
+    }
+
+    return $user;
 }

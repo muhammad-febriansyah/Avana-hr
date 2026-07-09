@@ -2,11 +2,16 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\Permission;
+use App\Models\User;
+use App\Services\MenuService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    public function __construct(private MenuService $menuService) {}
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -35,13 +40,41 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+        $isSuperAdmin = $user !== null && $user->tenant_id === null;
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
+                'isSuperAdmin' => $isSuperAdmin,
+                'permissions' => $this->resolvePermissions($user, $isSuperAdmin),
             ],
+            'menu' => $user !== null ? $this->menuService->forUser($user) : [],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * The current user's permission names. Super Admins implicitly hold every
+     * permission (see the `Gate::before` bypass), so return the full catalog.
+     *
+     * @return list<string>
+     */
+    protected function resolvePermissions(?User $user, bool $isSuperAdmin): array
+    {
+        if ($user === null) {
+            return [];
+        }
+
+        if ($isSuperAdmin) {
+            return Permission::values();
+        }
+
+        return array_values(array_map(
+            static fn (mixed $name): string => (string) $name,
+            $user->getAllPermissions()->pluck('name')->all(),
+        ));
     }
 }

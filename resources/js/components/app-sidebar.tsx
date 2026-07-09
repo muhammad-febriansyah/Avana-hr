@@ -1,47 +1,32 @@
-import { Link } from '@inertiajs/react';
-import {
-    BarChart3,
-    Calendar,
-    CalendarCheck,
-    Clock,
-    Contact,
-    LayoutGrid,
-    Network,
-    Settings,
-    Users,
-    Wallet,
-} from 'lucide-react';
+import { Link, usePage } from '@inertiajs/react';
+import { Building2, SlidersHorizontal } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
-import { NavMain } from '@/components/nav-main';
-import { NavUser } from '@/components/nav-user';
+import { NavMenuTree } from '@/components/nav-menu-tree';
 import {
     Sidebar,
     SidebarContent,
-    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { dashboard } from '@/routes';
-import type { NavItem } from '@/types';
+import { index as menusIndex } from '@/routes/platform/menus';
+import { index as tenantsIndex } from '@/routes/platform/tenants';
+import type { NavItem, SharedData } from '@/types';
 
-// Modul Wave 1. Rute yang belum dibangun sementara diarahkan ke '#'
-// (menu dinamis dari DB menyusul — Addendum M10).
-const mainNavItems: NavItem[] = [
-    { title: 'Dashboard', href: dashboard(), icon: LayoutGrid },
-    { title: 'Karyawan', href: '#', icon: Users },
-    { title: 'Struktur Organisasi', href: '#', icon: Network },
-    { title: 'Kehadiran', href: '#', icon: Clock },
-    { title: 'Cuti', href: '#', icon: CalendarCheck },
-    { title: 'Payroll', href: '#', icon: Wallet },
-    { title: 'CRM', href: '#', icon: Contact },
-    { title: 'Kalender', href: '#', icon: Calendar },
-    { title: 'Laporan', href: '#', icon: BarChart3 },
-    { title: 'Pengaturan', href: '/settings', icon: Settings },
+// The platform panel keeps a small hard-coded nav — it is not tenant-driven.
+const platformNavItems: NavItem[] = [
+    { title: 'Tenant', href: tenantsIndex(), icon: Building2 },
+    { title: 'Registry Menu', href: menusIndex(), icon: SlidersHorizontal },
 ];
 
 export function AppSidebar() {
+    const { auth, menu } = usePage<SharedData>().props;
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -57,12 +42,38 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                {auth.isSuperAdmin ? (
+                    <PlatformNav />
+                ) : (
+                    <NavMenuTree items={menu} />
+                )}
             </SidebarContent>
-
-            <SidebarFooter>
-                <NavUser />
-            </SidebarFooter>
         </Sidebar>
+    );
+}
+
+function PlatformNav() {
+    const { isCurrentUrl } = useCurrentUrl();
+
+    return (
+        <SidebarGroup className="px-2 py-0">
+            <SidebarGroupLabel>Platform</SidebarGroupLabel>
+            <SidebarMenu>
+                {platformNavItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                            asChild
+                            isActive={isCurrentUrl(item.href)}
+                            tooltip={{ children: item.title }}
+                        >
+                            <Link href={item.href} prefetch>
+                                {item.icon && <item.icon />}
+                                <span>{item.title}</span>
+                            </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                ))}
+            </SidebarMenu>
+        </SidebarGroup>
     );
 }

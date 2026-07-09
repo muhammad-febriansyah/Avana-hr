@@ -34,3 +34,6 @@ yarn-error.log
 /.claude
 /docs
 /template
+
+# Stray local sqlite db
+/avana_hr

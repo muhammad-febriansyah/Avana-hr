@@ -28,4 +28,10 @@ export default defineConfig({
             formVariants: true,
         }),
     ],
+    // Ensure a single React instance in dev — the UI mixes the unified
+    // `radix-ui` package with individual `@radix-ui/*` packages, which Vite's
+    // dep pre-bundling can otherwise resolve to two copies of React.
+    resolve: {
+        dedupe: ['react', 'react-dom'],
+    },
 });

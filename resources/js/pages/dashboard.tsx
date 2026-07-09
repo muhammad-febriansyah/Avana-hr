@@ -14,6 +14,7 @@ import {
     Wallet,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { PageBreadcrumb } from '@/components/shared/page-breadcrumb';
 import { dashboard } from '@/routes';
 
 const CHART_COLORS = [
@@ -462,6 +463,13 @@ export default function Dashboard() {
         <>
             <Head title="Dashboard" />
             <div className="flex flex-1 flex-col gap-5 p-6">
+                <PageBreadcrumb
+                    items={[
+                        { title: 'Beranda', href: dashboard().url },
+                        { title: 'Dashboard' },
+                    ]}
+                />
+
                 {/* Greeting */}
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>

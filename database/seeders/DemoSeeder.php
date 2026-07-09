@@ -30,6 +30,19 @@ class DemoSeeder extends Seeder
             Plan::firstOrCreate(['code' => $code], ['name' => $name]);
         }
 
+        // Feature gates per plan (drives menu availability). Essential is the
+        // baseline; higher tiers unlock CRM, Calendar and AI.
+        $planFeatures = [
+            'professional' => ['crm', 'calendar'],
+            'enterprise360' => ['crm', 'calendar', 'ai'],
+        ];
+        foreach ($planFeatures as $code => $features) {
+            $plan = Plan::where('code', $code)->first();
+            foreach ($features as $feature) {
+                $plan->features()->firstOrCreate(['feature_code' => $feature]);
+            }
+        }
+
         // Platform Super Admin (tenant_id null → full access via Gate::before, no spatie role).
         User::firstOrCreate(
             ['tenant_id' => null, 'email' => 'super@avana.test'],
