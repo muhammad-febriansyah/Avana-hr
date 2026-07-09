@@ -4,6 +4,7 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\CustomFieldController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\OrganizationController;
@@ -36,6 +37,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('employees', [EmployeeController::class, 'index'])
         ->middleware('can:employees.view')
         ->name('employees.index');
+
+    // Custom field definitions — registered before the {employee} wildcard.
+    Route::middleware('can:employees.update')->group(function () {
+        Route::get('employees/custom-fields', [CustomFieldController::class, 'index'])->name('employees.custom-fields.index');
+        Route::post('employees/custom-fields', [CustomFieldController::class, 'store'])->name('employees.custom-fields.store');
+        Route::put('employees/custom-fields/{customField}', [CustomFieldController::class, 'update'])->name('employees.custom-fields.update');
+        Route::delete('employees/custom-fields/{customField}', [CustomFieldController::class, 'destroy'])->name('employees.custom-fields.destroy');
+    });
 
     Route::middleware('can:employees.create')->group(function () {
         Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');

@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import { Pencil, Plus, Puzzle, Search, Trash2, Users } from 'lucide-react';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PageBreadcrumb } from '@/components/shared/page-breadcrumb';
@@ -26,6 +26,7 @@ import {
 import { usePermissions } from '@/hooks/use-permissions';
 import { dashboard } from '@/routes';
 import { create, destroy, edit, index, show } from '@/routes/employees';
+import { index as customFieldsIndex } from '@/routes/employees/custom-fields';
 
 type Employee = {
     id: number;
@@ -91,14 +92,24 @@ export default function EmployeesIndex({
                 title="Karyawan"
                 description="Kelola data seluruh karyawan perusahaan"
                 action={
-                    can('employees.create') ? (
-                        <Button asChild>
-                            <Link href={create().url}>
-                                <Plus className="size-4" />
-                                Tambah Karyawan
-                            </Link>
-                        </Button>
-                    ) : undefined
+                    <div className="flex gap-2">
+                        {can('employees.update') && (
+                            <Button variant="outline" asChild>
+                                <Link href={customFieldsIndex().url}>
+                                    <Puzzle className="size-4" />
+                                    Custom Field
+                                </Link>
+                            </Button>
+                        )}
+                        {can('employees.create') && (
+                            <Button asChild>
+                                <Link href={create().url}>
+                                    <Plus className="size-4" />
+                                    Tambah Karyawan
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
                 }
             />
 

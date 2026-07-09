@@ -1,4 +1,5 @@
 import { Head, Link, useForm } from '@inertiajs/react';
+import { useState } from 'react';
 import { PageBreadcrumb } from '@/components/shared/page-breadcrumb';
 import { PageHeader } from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,15 @@ type Employee = Record<string, unknown> & {
     status: string;
 };
 
+type Definition = {
+    id: number;
+    label: string;
+    key: string;
+    field_type: string;
+    options: string[];
+    is_required: boolean;
+};
+
 type Props = {
     employee: Employee | null;
     positions: Position[];
@@ -40,6 +50,8 @@ type Props = {
     orgUnits: Entity[];
     branches: Entity[];
     managers: Manager[];
+    customFields: Definition[];
+    customValues: Record<string, string | null>;
     options: {
         gender: Option[];
         marital_status: Option[];
@@ -59,8 +71,17 @@ export default function EmployeeForm({
     orgUnits,
     branches,
     managers,
+    customFields,
+    customValues,
     options,
 }: Props) {
+    const initialCustom: Record<string, string> = {};
+    customFields.forEach((f) => {
+        initialCustom[f.id] = str(customValues[f.id]);
+    });
+    const [customData, setCustomData] =
+        useState<Record<string, string>>(initialCustom);
+
     const form = useForm({
         full_name: str(employee?.full_name),
         nik_ktp: str(employee?.nik_ktp),
@@ -108,6 +129,7 @@ export default function EmployeeForm({
             email: d.email || null,
             birth_date: d.birth_date || null,
             join_date: d.join_date || null,
+            custom_fields: customData,
         }));
 
         if (employee) {
@@ -259,6 +281,83 @@ export default function EmployeeForm({
                             ])}
                     </CardContent>
                 </Card>
+
+                {customFields.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Data Tambahan</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 sm:grid-cols-2">
+                            {customFields.map((f) => {
+                                const err = (
+                                    form.errors as Record<string, string>
+                                )[`custom_fields.${f.id}`];
+
+                                return (
+                                    <div key={f.id} className="grid gap-2">
+                                        <Label htmlFor={`cf-${f.id}`}>
+                                            {f.label}
+                                            {f.is_required && ' *'}
+                                        </Label>
+                                        {f.field_type === 'select' ? (
+                                            <Select
+                                                value={customData[f.id] || NONE}
+                                                onValueChange={(v) =>
+                                                    setCustomData((p) => ({
+                                                        ...p,
+                                                        [f.id]:
+                                                            v === NONE ? '' : v,
+                                                    }))
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="-" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value={NONE}>
+                                                        -
+                                                    </SelectItem>
+                                                    {f.options.map((o) => (
+                                                        <SelectItem
+                                                            key={o}
+                                                            value={o}
+                                                        >
+                                                            {o}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <Input
+                                                id={`cf-${f.id}`}
+                                                type={
+                                                    f.field_type === 'number'
+                                                        ? 'number'
+                                                        : f.field_type ===
+                                                            'date'
+                                                          ? 'date'
+                                                          : 'text'
+                                                }
+                                                value={customData[f.id] ?? ''}
+                                                onChange={(e) =>
+                                                    setCustomData((p) => ({
+                                                        ...p,
+                                                        [f.id]: e.target.value,
+                                                    }))
+                                                }
+                                            />
+                                        )}
+                                        {err && (
+                                            <p className="text-sm text-red-600">
+                                                {err}
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </CardContent>
+                    </Card>
+                )}
 
                 <Card>
                     <CardHeader>

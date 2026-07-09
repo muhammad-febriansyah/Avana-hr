@@ -45,8 +45,11 @@ type Audit = {
     created_at: string;
 };
 
+type CustomField = { label: string; value: string | null };
+
 type Props = {
     employee: Employee;
+    customFields: CustomField[];
     audits: Audit[];
 };
 
@@ -71,7 +74,11 @@ function Row({ label, value }: { label: string; value: string | null }) {
     );
 }
 
-export default function EmployeeShow({ employee, audits }: Props) {
+export default function EmployeeShow({
+    employee,
+    customFields,
+    audits,
+}: Props) {
     const { can } = usePermissions();
     const [tab, setTab] = useState<Tab>('profil');
 
@@ -169,6 +176,13 @@ export default function EmployeeShow({ employee, audits }: Props) {
                                 value={employee.marital_status}
                             />
                             <Row label="PTKP" value={employee.ptkp_status} />
+                            {customFields.map((f) => (
+                                <Row
+                                    key={f.label}
+                                    label={f.label}
+                                    value={f.value}
+                                />
+                            ))}
                         </div>
                     )}
 

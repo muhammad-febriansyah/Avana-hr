@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Branch;
+use App\Models\CustomFieldDefinition;
+use App\Models\CustomFieldValue;
 use App\Models\Employee;
 use App\Models\Grade;
 use App\Models\OrgUnit;
@@ -11,6 +13,7 @@ use App\Models\Position;
 use App\Support\EmployeeCode;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -57,7 +60,12 @@ class EmployeeController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('employees/form', ['employee' => null, ...$this->formOptions(null)]);
+        return Inertia::render('employees/form', [
+            'employee' => null,
+            ...$this->formOptions(null),
+            'customFields' => $this->customFieldDefinitions(),
+            'customValues' => (object) [],
+        ]);
     }
 
     public function edit(Employee $employee): Response
@@ -70,6 +78,8 @@ class EmployeeController extends Controller
                 'branch_id' => $primaryBranch,
             ],
             ...$this->formOptions($employee),
+            'customFields' => $this->customFieldDefinitions(),
+            'customValues' => $this->customFieldValues($employee->id),
         ]);
     }
 
@@ -92,6 +102,14 @@ class EmployeeController extends Controller
                 'created_at' => $log->created_at->toIso8601String(),
             ]);
 
+        $values = $this->customFieldValues($employee->id);
+        $customFields = $this->customFieldDefinitions()
+            ->map(fn (array $def): array => [
+                'label' => $def['label'],
+                'value' => $values[$def['id']] ?? null,
+            ])
+            ->all();
+
         return Inertia::render('employees/show', [
             'employee' => [
                 ...$this->employeeAttributes($employee),
@@ -101,6 +119,7 @@ class EmployeeController extends Controller
                 'direct_manager' => $employee->directManager?->full_name,
                 'branch' => $primaryBranch?->branch?->name,
             ],
+            'customFields' => $customFields,
             'audits' => $audits,
         ]);
     }
@@ -109,6 +128,7 @@ class EmployeeController extends Controller
     {
         $tenant = $request->user()->tenant;
         $data = $this->validateData($request);
+        $custom = $this->validateCustom($request);
 
         $branchId = $data['branch_id'] ?? null;
         unset($data['branch_id']);
@@ -120,6 +140,7 @@ class EmployeeController extends Controller
         ]);
 
         $this->syncPrimaryBranch($employee, $branchId);
+        $this->saveCustomValues($employee->id, $custom);
 
         return to_route('employees.show', $employee->id)->with('success', 'Karyawan dibuat.');
     }
@@ -127,12 +148,14 @@ class EmployeeController extends Controller
     public function update(Request $request, Employee $employee): RedirectResponse
     {
         $data = $this->validateData($request, $employee->id);
+        $custom = $this->validateCustom($request);
 
         $branchId = $data['branch_id'] ?? null;
         unset($data['branch_id']);
 
         $employee->update($data);
         $this->syncPrimaryBranch($employee, $branchId);
+        $this->saveCustomValues($employee->id, $custom);
 
         return to_route('employees.show', $employee->id)->with('success', 'Karyawan diperbarui.');
     }
@@ -312,5 +335,84 @@ class EmployeeController extends Controller
                 $fail($message);
             }
         };
+    }
+
+    /** @var Collection<int, array{id: int, label: string, key: string, field_type: string, options: list<string>, is_required: bool}>|null */
+    private ?Collection $cachedDefinitions = null;
+
+    /**
+     * @return Collection<int, array{id: int, label: string, key: string, field_type: string, options: list<string>, is_required: bool}>
+     */
+    private function customFieldDefinitions(): Collection
+    {
+        return $this->cachedDefinitions ??= CustomFieldDefinition::where('entity', 'employee')
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (CustomFieldDefinition $def): array => [
+                'id' => $def->id,
+                'label' => $def->label,
+                'key' => $def->key,
+                'field_type' => $def->field_type,
+                'options' => array_values($def->options ?? []),
+                'is_required' => $def->is_required,
+            ]);
+    }
+
+    /**
+     * @return array<int, string|null>
+     */
+    private function customFieldValues(int $employeeId): array
+    {
+        $definitionIds = $this->customFieldDefinitions()->pluck('id');
+
+        /** @var array<int, string|null> $values */
+        $values = CustomFieldValue::whereIn('definition_id', $definitionIds)
+            ->where('entity_id', $employeeId)
+            ->pluck('value', 'definition_id')
+            ->all();
+
+        return $values;
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function validateCustom(Request $request): array
+    {
+        $definitions = $this->customFieldDefinitions();
+
+        $rules = [];
+        $attributes = [];
+        foreach ($definitions as $def) {
+            $base = $def['is_required'] ? ['required'] : ['nullable'];
+            $rules["custom_fields.{$def['id']}"] = match ($def['field_type']) {
+                'number' => [...$base, 'numeric'],
+                'date' => [...$base, 'date'],
+                'select' => [...$base, Rule::in($def['options'])],
+                default => [...$base, 'string', 'max:1000'],
+            };
+            $attributes["custom_fields.{$def['id']}"] = $def['label'];
+        }
+
+        /** @var array{custom_fields?: array<int, mixed>} $validated */
+        $validated = $request->validate($rules, [], $attributes);
+
+        return $validated['custom_fields'] ?? [];
+    }
+
+    /**
+     * @param  array<int, mixed>  $custom
+     */
+    private function saveCustomValues(int $employeeId, array $custom): void
+    {
+        foreach ($this->customFieldDefinitions() as $def) {
+            $value = $custom[$def['id']] ?? null;
+
+            CustomFieldValue::updateOrCreate(
+                ['definition_id' => $def['id'], 'entity_id' => $employeeId],
+                ['value' => $value === null ? null : (string) $value],
+            );
+        }
     }
 }
