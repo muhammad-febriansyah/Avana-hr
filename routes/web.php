@@ -18,7 +18,9 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ShiftController;
+use App\Http\Controllers\ShiftPatternController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
@@ -143,6 +145,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('holidays', [HolidayController::class, 'store'])->name('holidays.store');
         Route::delete('holidays/{holiday}', [HolidayController::class, 'destroy'])->name('holidays.destroy');
     });
+
+    Route::get('shift-patterns', [ShiftPatternController::class, 'index'])
+        ->middleware('can:shift.view')
+        ->name('shift-patterns.index');
+    Route::middleware('can:shift.manage')->group(function () {
+        Route::post('shift-patterns', [ShiftPatternController::class, 'store'])->name('shift-patterns.store');
+        Route::put('shift-patterns/{pattern}', [ShiftPatternController::class, 'update'])->name('shift-patterns.update');
+        Route::delete('shift-patterns/{pattern}', [ShiftPatternController::class, 'destroy'])->name('shift-patterns.destroy');
+    });
+
+    Route::get('schedules', [ScheduleController::class, 'index'])
+        ->middleware('can:shift.view')
+        ->name('schedules.index');
+    Route::post('schedules/generate', [ScheduleController::class, 'generate'])
+        ->middleware('can:shift.manage')
+        ->name('schedules.generate');
 
     Route::get('roles', [RoleController::class, 'index'])
         ->middleware('can:roles.view')

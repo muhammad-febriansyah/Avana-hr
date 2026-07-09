@@ -66,6 +66,8 @@ class MenuSeeder extends Seeder
 
             // Shift & Jadwal submenu
             ['code' => 'shifts', 'parent' => 'shift', 'label' => 'Shift', 'route' => 'shifts.index', 'permission' => 'shift.view', 'sort' => 1],
+            ['code' => 'shift-patterns', 'parent' => 'shift', 'label' => 'Pola Shift', 'route' => 'shift-patterns.index', 'permission' => 'shift.view', 'sort' => 2],
+            ['code' => 'schedules', 'parent' => 'shift', 'label' => 'Jadwal', 'route' => 'schedules.index', 'permission' => 'shift.view', 'sort' => 3],
             ['code' => 'holidays', 'parent' => 'shift', 'label' => 'Hari Libur', 'route' => 'holidays.index', 'permission' => 'shift.view', 'sort' => 4],
 
             // Attendance submenu
