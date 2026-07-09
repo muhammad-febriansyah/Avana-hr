@@ -9,6 +9,7 @@ use App\Models\TenantMenuSetting;
 use App\Services\MenuService;
 use Database\Seeders\MenuSeeder;
 use Database\Seeders\PermissionSeeder;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
@@ -120,6 +121,26 @@ it('filters menus the user has no permission for', function () {
     expect($tree)->not->toHaveKey('roles');
     expect($tree)->not->toHaveKey('audit');
     expect($tree)->not->toHaveKey('approval-workflow');
+});
+
+it('invalidates the cached menu on a database cache store after a write', function () {
+    // The database store no-ops Cache::increment on a missing key, so this
+    // guards the versioned-cache invalidation across cache drivers.
+    config(['cache.default' => 'database']);
+    Cache::clear();
+
+    $plan = planWith('professional', ['crm', 'calendar']);
+    $tenant = Tenant::factory()->create(['plan_id' => $plan->id]);
+    $admin = makeTenantUser($tenant, RoleEnum::CompanyAdmin->value);
+
+    // First resolve caches the tree with Roles visible.
+    expect(flattenMenu($this->service->forUser($admin)))->toHaveKey('roles');
+
+    // Hiding it must invalidate the cache (observer -> flushTenant).
+    $roles = Menu::where('code', 'roles')->firstOrFail();
+    TenantMenuSetting::create(['tenant_id' => $tenant->id, 'menu_id' => $roles->id, 'is_visible' => false]);
+
+    expect(flattenMenu($this->service->forUser($admin)))->not->toHaveKey('roles');
 });
 
 it('previews the tree for a specific tenant role without an actual user', function () {

@@ -3,6 +3,10 @@
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\GradeController;
+use App\Http\Controllers\OrganizationController;
+use App\Http\Controllers\OrgUnitController;
+use App\Http\Controllers\PositionController;
 use App\Http\Controllers\RoleController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +29,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('approval-workflow', [ApprovalFlowController::class, 'index'])->name('approval-workflow.index');
         Route::post('approval-workflow', [ApprovalFlowController::class, 'store'])->name('approval-workflow.store');
         Route::delete('approval-workflow/{approvalFlow}', [ApprovalFlowController::class, 'destroy'])->name('approval-workflow.destroy');
+    });
+
+    Route::get('organization', [OrganizationController::class, 'index'])
+        ->middleware('can:organization.view')
+        ->name('organization.index');
+
+    Route::middleware('can:organization.manage')->group(function () {
+        Route::post('org-units', [OrgUnitController::class, 'store'])->name('org-units.store');
+        Route::put('org-units/{orgUnit}', [OrgUnitController::class, 'update'])->name('org-units.update');
+        Route::delete('org-units/{orgUnit}', [OrgUnitController::class, 'destroy'])->name('org-units.destroy');
+
+        Route::post('grades', [GradeController::class, 'store'])->name('grades.store');
+        Route::put('grades/{grade}', [GradeController::class, 'update'])->name('grades.update');
+        Route::delete('grades/{grade}', [GradeController::class, 'destroy'])->name('grades.destroy');
+
+        Route::post('positions', [PositionController::class, 'store'])->name('positions.store');
+        Route::put('positions/{position}', [PositionController::class, 'update'])->name('positions.update');
+        Route::delete('positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
     });
 
     Route::get('roles', [RoleController::class, 'index'])

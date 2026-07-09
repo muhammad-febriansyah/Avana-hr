@@ -48,7 +48,7 @@ class MenuSeeder extends Seeder
             // Top level
             ['code' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'LayoutGrid', 'route' => 'dashboard', 'permission' => 'dashboard.view', 'core' => true, 'sort' => 1],
             ['code' => 'employees', 'label' => 'Karyawan', 'icon' => 'Users', 'permission' => 'employees.view', 'sort' => 2],
-            ['code' => 'organization', 'label' => 'Struktur Organisasi', 'icon' => 'Network', 'permission' => 'organization.view', 'sort' => 3],
+            ['code' => 'organization', 'label' => 'Struktur Organisasi', 'icon' => 'Network', 'route' => 'organization.index', 'permission' => 'organization.view', 'sort' => 3],
             ['code' => 'attendance', 'label' => 'Kehadiran', 'icon' => 'Clock', 'permission' => 'attendance.view', 'sort' => 4],
             ['code' => 'leave', 'label' => 'Cuti', 'icon' => 'CalendarCheck', 'permission' => 'leave.view', 'sort' => 5],
             ['code' => 'payroll', 'label' => 'Payroll', 'icon' => 'Wallet', 'permission' => 'payroll.view', 'sort' => 6],

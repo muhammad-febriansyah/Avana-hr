@@ -90,14 +90,24 @@ class MenuService
 
     public static function flushGlobal(): void
     {
-        Cache::increment('menu:global:ver');
+        self::bumpVersion('menu:global:ver');
     }
 
     public static function flushTenant(?int $tenantId): void
     {
         if ($tenantId !== null) {
-            Cache::increment("menu:tenant:{$tenantId}:ver");
+            self::bumpVersion("menu:tenant:{$tenantId}:ver");
         }
+    }
+
+    /**
+     * Bump a cache-version counter. Uses get+forever rather than
+     * Cache::increment so it also works on stores (e.g. database) where
+     * incrementing a missing key is a no-op.
+     */
+    private static function bumpVersion(string $key): void
+    {
+        Cache::forever($key, (int) Cache::get($key, 0) + 1);
     }
 
     /**
