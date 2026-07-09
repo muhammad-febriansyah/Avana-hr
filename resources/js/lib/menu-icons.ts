@@ -9,6 +9,7 @@ import {
     GitBranch,
     Inbox,
     LayoutGrid,
+    MapPin,
     Network,
     ScrollText,
     Settings,
@@ -38,6 +39,7 @@ const MENU_ICONS: Record<string, LucideIcon> = {
     Settings,
     SlidersHorizontal,
     Building2,
+    MapPin,
 };
 
 /**

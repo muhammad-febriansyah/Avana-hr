@@ -3,6 +3,7 @@
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\BranchController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
@@ -47,6 +48,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('positions', [PositionController::class, 'store'])->name('positions.store');
         Route::put('positions/{position}', [PositionController::class, 'update'])->name('positions.update');
         Route::delete('positions/{position}', [PositionController::class, 'destroy'])->name('positions.destroy');
+    });
+
+    Route::get('branches', [BranchController::class, 'index'])
+        ->middleware('can:branches.view')
+        ->name('branches.index');
+
+    Route::middleware('can:branches.manage')->group(function () {
+        Route::get('branches/create', [BranchController::class, 'create'])->name('branches.create');
+        Route::post('branches', [BranchController::class, 'store'])->name('branches.store');
+        Route::get('branches/{branch}/edit', [BranchController::class, 'edit'])->name('branches.edit');
+        Route::put('branches/{branch}', [BranchController::class, 'update'])->name('branches.update');
+        Route::delete('branches/{branch}', [BranchController::class, 'destroy'])->name('branches.destroy');
     });
 
     Route::get('roles', [RoleController::class, 'index'])

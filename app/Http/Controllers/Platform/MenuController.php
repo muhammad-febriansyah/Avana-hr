@@ -32,7 +32,7 @@ class MenuController extends Controller
     private array $iconOptions = [
         'LayoutGrid', 'Users', 'Network', 'Clock', 'CalendarCheck', 'Wallet',
         'Inbox', 'GitBranch', 'Contact', 'Calendar', 'BarChart3', 'ShieldCheck',
-        'ScrollText', 'Settings', 'Building2',
+        'ScrollText', 'Settings', 'Building2', 'MapPin', 'SlidersHorizontal',
     ];
 
     public function __construct(private MenuService $menuService, private PermissionRegistrar $registrar) {}
