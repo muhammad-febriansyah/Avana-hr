@@ -4,6 +4,7 @@ use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BranchController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
@@ -31,6 +32,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('approval-workflow', [ApprovalFlowController::class, 'store'])->name('approval-workflow.store');
         Route::delete('approval-workflow/{approvalFlow}', [ApprovalFlowController::class, 'destroy'])->name('approval-workflow.destroy');
     });
+
+    Route::get('employees', [EmployeeController::class, 'index'])
+        ->middleware('can:employees.view')
+        ->name('employees.index');
+
+    Route::middleware('can:employees.create')->group(function () {
+        Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
+        Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+    });
+    Route::middleware('can:employees.update')->group(function () {
+        Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('employees/{employee}', [EmployeeController::class, 'update'])->name('employees.update');
+    });
+    Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])
+        ->middleware('can:employees.delete')
+        ->name('employees.destroy');
+
+    // Keep the wildcard show route last so /employees/create resolves first.
+    Route::get('employees/{employee}', [EmployeeController::class, 'show'])
+        ->middleware('can:employees.view')
+        ->name('employees.show');
 
     Route::get('organization', [OrganizationController::class, 'index'])
         ->middleware('can:organization.view')

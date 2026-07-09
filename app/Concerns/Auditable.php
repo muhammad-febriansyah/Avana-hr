@@ -50,6 +50,7 @@ trait Auditable
             'nik_ktp',
             'nik_ktp_hash',
             'npwp',
+            'npwp_hash',
             'bank_account',
             'face_embedding',
         ];
