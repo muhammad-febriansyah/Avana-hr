@@ -14,6 +14,7 @@ use App\Http\Controllers\EmployeeMovementController;
 use App\Http\Controllers\EmployeeTerminationController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\LeaveTypeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
 use App\Http\Controllers\PositionController;
@@ -161,6 +162,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('schedules/generate', [ScheduleController::class, 'generate'])
         ->middleware('can:shift.manage')
         ->name('schedules.generate');
+
+    // Cuti (Fase 2.2)
+    Route::get('leave-types', [LeaveTypeController::class, 'index'])
+        ->middleware('can:leave.view')
+        ->name('leave-types.index');
+    Route::middleware('can:leave.manage-types')->group(function () {
+        Route::post('leave-types', [LeaveTypeController::class, 'store'])->name('leave-types.store');
+        Route::put('leave-types/{leaveType}', [LeaveTypeController::class, 'update'])->name('leave-types.update');
+        Route::delete('leave-types/{leaveType}', [LeaveTypeController::class, 'destroy'])->name('leave-types.destroy');
+    });
 
     Route::get('roles', [RoleController::class, 'index'])
         ->middleware('can:roles.view')
