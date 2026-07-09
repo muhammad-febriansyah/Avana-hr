@@ -79,6 +79,7 @@ class MenuSeeder extends Seeder
             ['code' => 'attendance.correction', 'parent' => 'attendance', 'label' => 'Koreksi Kehadiran', 'permission' => 'attendance.correct', 'sort' => 2],
 
             // Payroll submenu
+            ['code' => 'salary-components', 'parent' => 'payroll', 'label' => 'Komponen Gaji', 'route' => 'salary-components.index', 'permission' => 'payroll.view', 'sort' => 5],
             ['code' => 'payroll.process', 'parent' => 'payroll', 'label' => 'Proses Payroll', 'permission' => 'payroll.process', 'sort' => 1],
             ['code' => 'payroll.payslip', 'parent' => 'payroll', 'label' => 'Slip Gaji', 'permission' => 'payroll.view', 'sort' => 2],
             ['code' => 'payroll.bank', 'parent' => 'payroll', 'label' => 'Bank File', 'permission' => 'payroll.export-bank', 'sort' => 3],

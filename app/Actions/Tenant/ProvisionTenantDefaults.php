@@ -3,12 +3,14 @@
 namespace App\Actions\Tenant;
 
 use App\Enums\Role as RoleEnum;
+use App\Models\SalaryComponent;
 use App\Models\Tenant;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 /**
- * Provisions the default set of roles (with their permissions) for a tenant.
+ * Provisions the default set of roles (with their permissions) and standard
+ * payroll components for a tenant.
  *
  * Assumes global permissions are already seeded (see PermissionSeeder). Runs
  * within the tenant's team context so roles carry the correct `tenant_id`.
@@ -26,6 +28,8 @@ class ProvisionTenantDefaults
             Role::findOrCreate($role->value, 'web')
                 ->syncPermissions($role->permissions());
         }
+
+        SalaryComponent::seedDefaults($tenant);
 
         $this->registrar->setPermissionsTeamId($previousTeam);
         $this->registrar->forgetCachedPermissions();

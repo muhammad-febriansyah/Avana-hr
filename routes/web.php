@@ -21,6 +21,7 @@ use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SalaryComponentController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ShiftController;
 use App\Http\Controllers\ShiftPatternController;
@@ -192,6 +193,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('attendance/rebuild', [AttendanceController::class, 'rebuild'])
         ->middleware('can:attendance.manage')
         ->name('attendance.rebuild');
+
+    // Payroll — Master (Fase 3)
+    Route::get('salary-components', [SalaryComponentController::class, 'index'])
+        ->middleware('can:payroll.view')
+        ->name('salary-components.index');
+    Route::middleware('can:payroll.manage-master')->group(function () {
+        Route::post('salary-components', [SalaryComponentController::class, 'store'])->name('salary-components.store');
+        Route::put('salary-components/{salaryComponent}', [SalaryComponentController::class, 'update'])->name('salary-components.update');
+        Route::delete('salary-components/{salaryComponent}', [SalaryComponentController::class, 'destroy'])->name('salary-components.destroy');
+    });
 
     Route::get('roles', [RoleController::class, 'index'])
         ->middleware('can:roles.view')
