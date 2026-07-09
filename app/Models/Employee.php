@@ -115,6 +115,14 @@ class Employee extends Model
     }
 
     /**
+     * @return HasMany<EmployeeContract, $this>
+     */
+    public function contracts(): HasMany
+    {
+        return $this->hasMany(EmployeeContract::class)->latest('start_date');
+    }
+
+    /**
      * @return HasOne<User, $this>
      */
     public function user(): HasOne

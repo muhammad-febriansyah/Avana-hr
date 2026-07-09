@@ -5,7 +5,9 @@ use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CustomFieldController;
+use App\Http\Controllers\EmployeeContractController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\EmployeeImportController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
@@ -49,6 +51,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('can:employees.create')->group(function () {
         Route::get('employees/create', [EmployeeController::class, 'create'])->name('employees.create');
         Route::post('employees', [EmployeeController::class, 'store'])->name('employees.store');
+
+        // Bulk import (Excel/CSV). Deeper paths — no clash with the {employee} wildcard.
+        Route::get('employees/import/template', [EmployeeImportController::class, 'template'])->name('employees.import.template');
+        Route::post('employees/import', [EmployeeImportController::class, 'store'])->name('employees.import.store');
+        Route::get('employees/import/exceptions/{token}', [EmployeeImportController::class, 'exceptions'])->name('employees.import.exceptions');
     });
     Route::middleware('can:employees.update')->group(function () {
         Route::get('employees/{employee}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
@@ -57,6 +64,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('employees/{employee}', [EmployeeController::class, 'destroy'])
         ->middleware('can:employees.delete')
         ->name('employees.destroy');
+
+    // Employee contracts — managed from the employee detail page.
+    Route::middleware('can:employees.update')->scopeBindings()->group(function () {
+        Route::post('employees/{employee}/contracts', [EmployeeContractController::class, 'store'])->name('employees.contracts.store');
+        Route::put('employees/{employee}/contracts/{contract}', [EmployeeContractController::class, 'update'])->name('employees.contracts.update');
+        Route::delete('employees/{employee}/contracts/{contract}', [EmployeeContractController::class, 'destroy'])->name('employees.contracts.destroy');
+    });
+    Route::get('employees/{employee}/contracts/{contract}/download', [EmployeeContractController::class, 'download'])
+        ->middleware('can:employees.view')
+        ->scopeBindings()
+        ->name('employees.contracts.download');
 
     // Keep the wildcard show route last so /employees/create resolves first.
     Route::get('employees/{employee}', [EmployeeController::class, 'show'])

@@ -52,6 +52,9 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $this->resolvePermissions($user, $isSuperAdmin),
             ],
             'menu' => $user !== null ? $this->menuService->forUser($user) : [],
+            'flash' => [
+                'importResult' => $request->session()->get('importResult'),
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

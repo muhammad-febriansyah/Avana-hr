@@ -1,5 +1,16 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Pencil, Plus, Puzzle, Search, Trash2, Users } from 'lucide-react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import {
+    Download,
+    FileDown,
+    Pencil,
+    Plus,
+    Puzzle,
+    Search,
+    Trash2,
+    Upload,
+    Users,
+} from 'lucide-react';
+import { useState } from 'react';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { EmptyState } from '@/components/shared/empty-state';
 import { PageBreadcrumb } from '@/components/shared/page-breadcrumb';
@@ -7,7 +18,16 @@ import { PageHeader } from '@/components/shared/page-header';
 import { StatusBadge } from '@/components/shared/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -27,6 +47,11 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { dashboard } from '@/routes';
 import { create, destroy, edit, index, show } from '@/routes/employees';
 import { index as customFieldsIndex } from '@/routes/employees/custom-fields';
+import {
+    exceptions as importExceptions,
+    store as importStore,
+    template as importTemplate,
+} from '@/routes/employees/import';
 
 type Employee = {
     id: number;
@@ -52,6 +77,15 @@ type Props = {
     filters: Filters;
 };
 
+type ImportException = { row: number; name: string; reason: string };
+
+type ImportResult = {
+    imported: number;
+    failed: number;
+    exceptions: ImportException[];
+    token: string | null;
+};
+
 const ALL = '__all__';
 
 export default function EmployeesIndex({
@@ -60,6 +94,19 @@ export default function EmployeesIndex({
     filters,
 }: Props) {
     const { can } = usePermissions();
+    const { flash } = usePage<{
+        flash?: { importResult?: ImportResult | null };
+    }>().props;
+    const flashResult = flash?.importResult ?? null;
+    const [importOpen, setImportOpen] = useState(false);
+    const [result, setResult] = useState<ImportResult | null>(flashResult);
+    const [seenFlash, setSeenFlash] = useState(flashResult);
+
+    // Re-open the result dialog whenever a fresh import result arrives via flash.
+    if (flashResult !== seenFlash) {
+        setSeenFlash(flashResult);
+        setResult(flashResult);
+    }
 
     const apply = (patch: Partial<Filters>) => {
         const next = { ...filters, ...patch };
@@ -99,6 +146,15 @@ export default function EmployeesIndex({
                                     <Puzzle className="size-4" />
                                     Custom Field
                                 </Link>
+                            </Button>
+                        )}
+                        {can('employees.create') && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setImportOpen(true)}
+                            >
+                                <Upload className="size-4" />
+                                Import
                             </Button>
                         )}
                         {can('employees.create') && (
@@ -274,6 +330,156 @@ export default function EmployeesIndex({
                     )}
                 </CardContent>
             </Card>
+
+            <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
+
+            <ResultDialog
+                result={result}
+                onOpenChange={(open) => !open && setResult(null)}
+            />
         </div>
+    );
+}
+
+function ImportDialog({
+    open,
+    onOpenChange,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const form = useForm<{ file: File | null }>({ file: null });
+
+    const submit = () => {
+        form.post(importStore().url, {
+            forceFormData: true,
+            onSuccess: () => {
+                form.reset();
+                onOpenChange(false);
+            },
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Import Karyawan</DialogTitle>
+                    <DialogDescription>
+                        Unggah berkas Excel/CSV sesuai template. Baris yang gagal
+                        akan masuk daftar exception yang bisa diunduh.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4">
+                    <Button variant="outline" asChild className="justify-start">
+                        <a href={importTemplate().url}>
+                            <FileDown className="size-4" />
+                            Unduh Template
+                        </a>
+                    </Button>
+                    <div className="grid gap-2">
+                        <Label htmlFor="import-file">Berkas (.xlsx/.csv)</Label>
+                        <Input
+                            id="import-file"
+                            type="file"
+                            accept=".xlsx,.xls,.csv"
+                            onChange={(e) =>
+                                form.setData('file', e.target.files?.[0] ?? null)
+                            }
+                        />
+                        {form.errors.file && (
+                            <p className="text-sm text-red-600">
+                                {form.errors.file}
+                            </p>
+                        )}
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        onClick={submit}
+                        disabled={form.processing || !form.data.file}
+                    >
+                        Import
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ResultDialog({
+    result,
+    onOpenChange,
+}: {
+    result: ImportResult | null;
+    onOpenChange: (open: boolean) => void;
+}) {
+    return (
+        <Dialog open={result !== null} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Hasil Import</DialogTitle>
+                    <DialogDescription>
+                        {result?.imported ?? 0} karyawan berhasil diimpor
+                        {result && result.failed > 0
+                            ? `, ${result.failed} baris gagal.`
+                            : '.'}
+                    </DialogDescription>
+                </DialogHeader>
+
+                {result && result.failed > 0 && (
+                    <div className="flex flex-col gap-3">
+                        {result.token && (
+                            <Button
+                                variant="outline"
+                                asChild
+                                className="justify-start"
+                            >
+                                <a href={importExceptions(result.token).url}>
+                                    <Download className="size-4" />
+                                    Unduh Daftar Exception (.xlsx)
+                                </a>
+                            </Button>
+                        )}
+                        <div className="max-h-64 overflow-y-auto rounded-md border border-border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-16">
+                                            Baris
+                                        </TableHead>
+                                        <TableHead>Nama</TableHead>
+                                        <TableHead>Alasan</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {result.exceptions.map((ex) => (
+                                        <TableRow key={ex.row}>
+                                            <TableCell>{ex.row}</TableCell>
+                                            <TableCell>
+                                                {ex.name || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-red-600">
+                                                {ex.reason}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </div>
+                )}
+
+                <DialogFooter>
+                    <Button onClick={() => onOpenChange(false)}>Tutup</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

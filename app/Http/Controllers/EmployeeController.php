@@ -7,6 +7,7 @@ use App\Models\Branch;
 use App\Models\CustomFieldDefinition;
 use App\Models\CustomFieldValue;
 use App\Models\Employee;
+use App\Models\EmployeeContract;
 use App\Models\Grade;
 use App\Models\OrgUnit;
 use App\Models\Position;
@@ -120,6 +121,15 @@ class EmployeeController extends Controller
                 'branch' => $primaryBranch?->branch?->name,
             ],
             'customFields' => $customFields,
+            'contracts' => $employee->contracts()->get()->map(fn (EmployeeContract $contract): array => [
+                'id' => $contract->id,
+                'contract_no' => $contract->contract_no,
+                'type' => $contract->type,
+                'start_date' => $contract->start_date->toDateString(),
+                'end_date' => $contract->end_date?->toDateString(),
+                'status' => $contract->status,
+                'has_file' => $contract->file_path !== null,
+            ])->all(),
             'audits' => $audits,
         ]);
     }

@@ -10,6 +10,8 @@ const STATUS_STYLES: Record<string, string> = {
     present: 'bg-green-100 text-green-800',
     hadir: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800',
+    expired: 'bg-orange-100 text-orange-800',
+    terminated: 'bg-red-100 text-red-800',
     inactive: 'bg-red-100 text-red-800',
     nonaktif: 'bg-red-100 text-red-800',
     absent: 'bg-red-100 text-red-800',
