@@ -3,6 +3,7 @@
 namespace App\Actions\Tenant;
 
 use App\Enums\Role as RoleEnum;
+use App\Models\PayrollGroup;
 use App\Models\SalaryComponent;
 use App\Models\Tenant;
 use Spatie\Permission\Models\Role;
@@ -30,6 +31,7 @@ class ProvisionTenantDefaults
         }
 
         SalaryComponent::seedDefaults($tenant);
+        PayrollGroup::seedDefault($tenant);
 
         $this->registrar->setPermissionsTeamId($previousTeam);
         $this->registrar->forgetCachedPermissions();

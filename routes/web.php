@@ -19,6 +19,7 @@ use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\LeaveTypeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
+use App\Http\Controllers\PayrollGroupController;
 use App\Http\Controllers\PositionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SalaryComponentController;
@@ -198,10 +199,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('salary-components', [SalaryComponentController::class, 'index'])
         ->middleware('can:payroll.view')
         ->name('salary-components.index');
+    Route::get('payroll-groups', [PayrollGroupController::class, 'index'])
+        ->middleware('can:payroll.view')
+        ->name('payroll-groups.index');
     Route::middleware('can:payroll.manage-master')->group(function () {
         Route::post('salary-components', [SalaryComponentController::class, 'store'])->name('salary-components.store');
         Route::put('salary-components/{salaryComponent}', [SalaryComponentController::class, 'update'])->name('salary-components.update');
         Route::delete('salary-components/{salaryComponent}', [SalaryComponentController::class, 'destroy'])->name('salary-components.destroy');
+
+        Route::post('payroll-groups', [PayrollGroupController::class, 'store'])->name('payroll-groups.store');
+        Route::put('payroll-groups/{payrollGroup}', [PayrollGroupController::class, 'update'])->name('payroll-groups.update');
+        Route::delete('payroll-groups/{payrollGroup}', [PayrollGroupController::class, 'destroy'])->name('payroll-groups.destroy');
     });
 
     Route::get('roles', [RoleController::class, 'index'])
