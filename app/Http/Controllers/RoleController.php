@@ -17,7 +17,7 @@ class RoleController extends Controller
     public function __construct(private PermissionRegistrar $registrar) {}
 
     /**
-     * List the tenant's roles plus the grouped permission catalog.
+     * List the tenant's roles.
      */
     public function index(Request $request): Response
     {
@@ -25,18 +25,44 @@ class RoleController extends Controller
 
         $roles = Role::query()
             ->where('tenant_id', $tenantId)
-            ->with('permissions:id,name')
+            ->withCount('permissions')
             ->orderBy('name')
             ->get()
             ->map(fn (Role $role): array => [
                 'id' => $role->id,
                 'name' => $role->name,
                 'is_default' => $this->isDefaultRole($role->name),
-                'permissions' => $role->permissions->pluck('name')->all(),
+                'permissions_count' => $role->permissions_count,
             ]);
 
         return Inertia::render('roles/index', [
             'roles' => $roles,
+        ]);
+    }
+
+    /**
+     * Full-page create form (the permission catalog is too large for a modal).
+     */
+    public function create(): Response
+    {
+        return Inertia::render('roles/form', [
+            'role' => null,
+            'permissionGroups' => $this->permissionGroups(),
+        ]);
+    }
+
+    public function edit(Request $request, Role $role): Response
+    {
+        $this->authorizeTenantRole($request, $role);
+        $role->load('permissions:id,name');
+
+        return Inertia::render('roles/form', [
+            'role' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'is_default' => $this->isDefaultRole($role->name),
+                'permissions' => $role->permissions->pluck('name')->all(),
+            ],
             'permissionGroups' => $this->permissionGroups(),
         ]);
     }
@@ -56,7 +82,7 @@ class RoleController extends Controller
 
         $this->registrar->forgetCachedPermissions();
 
-        return back()->with('success', 'Peran dibuat.');
+        return to_route('roles.index')->with('success', 'Peran dibuat.');
     }
 
     public function update(Request $request, Role $role): RedirectResponse
@@ -74,7 +100,7 @@ class RoleController extends Controller
 
         $this->registrar->forgetCachedPermissions();
 
-        return back()->with('success', 'Peran diperbarui.');
+        return to_route('roles.index')->with('success', 'Peran diperbarui.');
     }
 
     public function destroy(Request $request, Role $role): RedirectResponse

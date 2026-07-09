@@ -19,28 +19,30 @@ export function AppSidebarHeader() {
     const roleLabel = auth.isSuperAdmin ? 'Super Admin' : 'Company Admin';
 
     return (
-        <header className="flex h-16 shrink-0 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur md:px-6">
-            <SidebarTrigger className="-ml-1" />
+        <header className="sticky top-0 z-20 flex h-16 shrink-0 items-center gap-3 border-b border-border bg-card px-4 md:px-6">
+            <SidebarTrigger className="-ml-1 text-muted-foreground" />
 
             <div className="relative hidden w-full max-w-md md:block">
                 <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                     type="search"
                     placeholder="Cari karyawan, menu..."
-                    className="h-10 rounded-full bg-muted/50 pl-9"
+                    className="h-10 rounded-lg bg-muted/60 pl-9"
                 />
             </div>
 
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex items-center gap-3">
                 <Button
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="relative rounded-full text-muted-foreground"
+                    className="relative size-10 rounded-lg border-border text-muted-foreground"
                     aria-label="Notifikasi"
                 >
                     <Bell className="size-5" />
-                    <span className="absolute top-2 right-2.5 size-2 rounded-full bg-red-500 ring-2 ring-background" />
+                    <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-red-500 ring-2 ring-card" />
                 </Button>
+
+                <div className="h-8 w-px bg-border" />
 
                 {auth.user && (
                     <DropdownMenu>

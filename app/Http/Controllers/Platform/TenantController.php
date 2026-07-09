@@ -46,6 +46,15 @@ class TenantController extends Controller
 
         return Inertia::render('platform/tenants/index', [
             'tenants' => $tenants,
+        ]);
+    }
+
+    /**
+     * Full-page create form (tenant details plus its first Company Admin).
+     */
+    public function create(): Response
+    {
+        return Inertia::render('platform/tenants/create', [
             'plans' => Plan::query()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -95,7 +104,7 @@ class TenantController extends Controller
             $this->registrar->setPermissionsTeamId($previousTeam);
         });
 
-        return back()->with('success', 'Tenant baru dibuat.');
+        return to_route('platform.tenants.index')->with('success', 'Tenant baru dibuat.');
     }
 
     public function update(Request $request, Tenant $tenant): RedirectResponse

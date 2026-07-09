@@ -52,12 +52,49 @@ class MenuController extends Controller
             'menus' => $this->registryTree($menus),
             'tenants' => Tenant::orderBy('name')->get(['id', 'name', 'plan_id']),
             'overrides' => $overrides,
-            'permissionOptions' => PermissionEnum::values(),
-            'featureOptions' => ['crm', 'calendar', 'ai'],
-            'iconOptions' => $this->iconOptions,
             'previewRoles' => $previewRoles,
             'preview' => $preview,
         ]);
+    }
+
+    public function create(): Response
+    {
+        return Inertia::render('platform/menus/form', $this->formProps(null));
+    }
+
+    public function edit(Menu $menu): Response
+    {
+        return Inertia::render('platform/menus/form', $this->formProps($menu));
+    }
+
+    /**
+     * Shared props for the create/edit form page.
+     *
+     * @return array<string, mixed>
+     */
+    private function formProps(?Menu $menu): array
+    {
+        return [
+            'menu' => $menu === null ? null : [
+                'id' => $menu->id,
+                'code' => $menu->code,
+                'parent_id' => $menu->parent_id,
+                'label_default' => $menu->label_default,
+                'icon' => $menu->icon,
+                'route_name' => $menu->route_name,
+                'permission_code' => $menu->permission_code,
+                'feature_code' => $menu->feature_code,
+                'sort_order' => $menu->sort_order,
+                'is_core' => $menu->is_core,
+                'is_active' => $menu->is_active,
+            ],
+            'parents' => Menu::whereNull('parent_id')
+                ->orderBy('sort_order')
+                ->get(['id', 'label_default']),
+            'permissionOptions' => PermissionEnum::values(),
+            'featureOptions' => ['crm', 'calendar', 'ai'],
+            'iconOptions' => $this->iconOptions,
+        ];
     }
 
     /**
@@ -99,7 +136,7 @@ class MenuController extends Controller
         $validated = $this->validateMenu($request);
         Menu::create($validated);
 
-        return back()->with('success', 'Menu dibuat.');
+        return to_route('platform.menus.index')->with('success', 'Menu dibuat.');
     }
 
     public function update(Request $request, Menu $menu): RedirectResponse
@@ -113,7 +150,7 @@ class MenuController extends Controller
 
         $menu->update($validated);
 
-        return back()->with('success', 'Menu diperbarui.');
+        return to_route('platform.menus.index')->with('success', 'Menu diperbarui.');
     }
 
     public function destroy(Menu $menu): RedirectResponse

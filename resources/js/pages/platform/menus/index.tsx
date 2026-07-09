@@ -14,7 +14,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
     ChevronRight,
     Eye,
@@ -32,16 +32,6 @@ import { PageHeader } from '@/components/shared/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Select,
@@ -52,11 +42,11 @@ import {
 } from '@/components/ui/select';
 import {
     availability,
+    create,
     destroy,
+    edit,
     index,
     reorder,
-    store,
-    update,
 } from '@/routes/platform/menus';
 import type { MenuNode } from '@/types';
 
@@ -82,27 +72,17 @@ type Props = {
     menus: RegistryMenu[];
     tenants: Tenant[];
     overrides: Record<number, Record<number, boolean>>;
-    permissionOptions: string[];
-    featureOptions: string[];
-    iconOptions: string[];
     previewRoles: RoleOption[];
     preview: MenuNode[] | null;
 };
-
-const NONE = '__none__';
 
 export default function PlatformMenus({
     menus,
     tenants,
     overrides,
-    permissionOptions,
-    featureOptions,
-    iconOptions,
     previewRoles,
     preview,
 }: Props) {
-    const [editing, setEditing] = useState<RegistryMenu | null>(null);
-    const [open, setOpen] = useState(false);
     const [tenantId, setTenantId] = useState<string>('');
     const [groups, setGroups] = useState<RegistryMenu[]>(menus);
     const [dirty, setDirty] = useState(false);
@@ -115,15 +95,6 @@ export default function PlatformMenus({
     );
 
     const flatMenus = menus.flatMap((m) => [m, ...(m.children ?? [])]);
-
-    const openCreate = () => {
-        setEditing(null);
-        setOpen(true);
-    };
-    const openEdit = (menu: RegistryMenu) => {
-        setEditing(menu);
-        setOpen(true);
-    };
 
     const reorderParents = (event: DragEndEvent) => {
         const { active, over } = event;
@@ -203,25 +174,14 @@ export default function PlatformMenus({
         );
     };
 
-    const changePreviewTenant = (value: string) => {
+    const changePreview = (tenant: string, role?: string) => {
         router.get(
             index().url,
-            { preview_tenant_id: value },
+            role
+                ? { preview_tenant_id: tenant, preview_role_id: role }
+                : { preview_tenant_id: tenant },
             {
-                only: ['previewRoles', 'preview'],
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-            },
-        );
-    };
-
-    const changePreviewRole = (tenant: string, role: string) => {
-        router.get(
-            index().url,
-            { preview_tenant_id: tenant, preview_role_id: role },
-            {
-                only: ['preview'],
+                only: role ? ['preview'] : ['previewRoles', 'preview'],
                 preserveState: true,
                 preserveScroll: true,
                 replace: true,
@@ -240,9 +200,11 @@ export default function PlatformMenus({
                 title="Registry Menu"
                 description="Kelola daftar menu platform, urutan, dan ketersediaannya per tenant"
                 action={
-                    <Button onClick={openCreate}>
-                        <Plus className="size-4" />
-                        Tambah Menu
+                    <Button asChild>
+                        <Link href={create().url}>
+                            <Plus className="size-4" />
+                            Tambah Menu
+                        </Link>
                     </Button>
                 }
             />
@@ -271,7 +233,6 @@ export default function PlatformMenus({
                                     key={group.id}
                                     group={group}
                                     sensors={sensors}
-                                    onEdit={openEdit}
                                     onReorderChildren={reorderChildren(
                                         group.id,
                                     )}
@@ -327,19 +288,7 @@ export default function PlatformMenus({
                 tenants={tenants}
                 previewRoles={previewRoles}
                 preview={preview}
-                onTenantChange={changePreviewTenant}
-                onRoleChange={changePreviewRole}
-            />
-
-            <MenuFormDialog
-                key={editing?.id ?? 'new'}
-                open={open}
-                onOpenChange={setOpen}
-                editing={editing}
-                parents={menus}
-                permissionOptions={permissionOptions}
-                featureOptions={featureOptions}
-                iconOptions={iconOptions}
+                onChange={changePreview}
             />
         </div>
     );
@@ -348,12 +297,10 @@ export default function PlatformMenus({
 function RegistryGroup({
     group,
     sensors,
-    onEdit,
     onReorderChildren,
 }: {
     group: RegistryMenu;
     sensors: ReturnType<typeof useSensors>;
-    onEdit: (menu: RegistryMenu) => void;
     onReorderChildren: (event: DragEndEvent) => void;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition } =
@@ -367,7 +314,6 @@ function RegistryGroup({
         >
             <RegistryRow
                 menu={group}
-                onEdit={onEdit}
                 dragHandle={
                     <DragHandle attributes={attributes} listeners={listeners} />
                 }
@@ -384,11 +330,7 @@ function RegistryGroup({
                             strategy={verticalListSortingStrategy}
                         >
                             {children.map((child) => (
-                                <RegistryChild
-                                    key={child.id}
-                                    menu={child}
-                                    onEdit={onEdit}
-                                />
+                                <RegistryChild key={child.id} menu={child} />
                             ))}
                         </SortableContext>
                     </DndContext>
@@ -398,13 +340,7 @@ function RegistryGroup({
     );
 }
 
-function RegistryChild({
-    menu,
-    onEdit,
-}: {
-    menu: RegistryMenu;
-    onEdit: (menu: RegistryMenu) => void;
-}) {
+function RegistryChild({ menu }: { menu: RegistryMenu }) {
     const { attributes, listeners, setNodeRef, transform, transition } =
         useSortable({ id: menu.id });
 
@@ -416,7 +352,6 @@ function RegistryChild({
             <RegistryRow
                 menu={menu}
                 nested
-                onEdit={onEdit}
                 dragHandle={
                     <DragHandle attributes={attributes} listeners={listeners} />
                 }
@@ -448,12 +383,10 @@ function DragHandle({
 function RegistryRow({
     menu,
     nested = false,
-    onEdit,
     dragHandle,
 }: {
     menu: RegistryMenu;
     nested?: boolean;
-    onEdit: (menu: RegistryMenu) => void;
     dragHandle: React.ReactNode;
 }) {
     return (
@@ -478,10 +411,12 @@ function RegistryRow({
                 <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => onEdit(menu)}
+                    asChild
                     aria-label={`Edit ${menu.label_default}`}
                 >
-                    <Pencil className="size-4" />
+                    <Link href={edit(menu.id).url}>
+                        <Pencil className="size-4" />
+                    </Link>
                 </Button>
                 <ConfirmDialog
                     title={`Hapus menu ${menu.label_default}?`}
@@ -515,7 +450,6 @@ function AvailabilityRow({
     tenantId: number;
     current: boolean | undefined;
 }) {
-    // Tri-state: default (follow plan), forced on, forced off.
     const value = current === undefined ? 'default' : current ? 'on' : 'off';
 
     const change = (next: string) => {
@@ -551,14 +485,12 @@ function PreviewCard({
     tenants,
     previewRoles,
     preview,
-    onTenantChange,
-    onRoleChange,
+    onChange,
 }: {
     tenants: Tenant[];
     previewRoles: RoleOption[];
     preview: MenuNode[] | null;
-    onTenantChange: (tenantId: string) => void;
-    onRoleChange: (tenantId: string, roleId: string) => void;
+    onChange: (tenantId: string, roleId?: string) => void;
 }) {
     const [tenantId, setTenantId] = useState('');
     const [roleId, setRoleId] = useState('');
@@ -577,7 +509,7 @@ function PreviewCard({
                             onValueChange={(v) => {
                                 setTenantId(v);
                                 setRoleId('');
-                                onTenantChange(v);
+                                onChange(v);
                             }}
                         >
                             <SelectTrigger>
@@ -602,7 +534,7 @@ function PreviewCard({
                             disabled={!tenantId}
                             onValueChange={(v) => {
                                 setRoleId(v);
-                                onRoleChange(tenantId, v);
+                                onChange(tenantId, v);
                             }}
                         >
                             <SelectTrigger>
@@ -673,268 +605,5 @@ function PreviewTree({ nodes }: { nodes: MenuNode[] }) {
                 </li>
             ))}
         </ul>
-    );
-}
-
-function MenuFormDialog({
-    open,
-    onOpenChange,
-    editing,
-    parents,
-    permissionOptions,
-    featureOptions,
-    iconOptions,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    editing: RegistryMenu | null;
-    parents: RegistryMenu[];
-    permissionOptions: string[];
-    featureOptions: string[];
-    iconOptions: string[];
-}) {
-    const form = useForm({
-        code: editing?.code ?? '',
-        label_default: editing?.label_default ?? '',
-        icon: editing?.icon ?? '',
-        route_name: editing?.route_name ?? '',
-        parent_id: editing?.parent_id ? String(editing.parent_id) : NONE,
-        permission_code: editing?.permission_code ?? NONE,
-        feature_code: editing?.feature_code ?? NONE,
-        sort_order: editing?.sort_order ?? 0,
-        is_core: editing?.is_core ?? false,
-        is_active: editing?.is_active ?? true,
-    });
-
-    const submit = () => {
-        const payload = {
-            ...form.data,
-            parent_id:
-                form.data.parent_id === NONE
-                    ? null
-                    : Number(form.data.parent_id),
-            permission_code:
-                form.data.permission_code === NONE
-                    ? null
-                    : form.data.permission_code,
-            feature_code:
-                form.data.feature_code === NONE ? null : form.data.feature_code,
-            icon: form.data.icon || null,
-            route_name: form.data.route_name || null,
-        };
-        const options = {
-            preserveScroll: true,
-            onSuccess: () => onOpenChange(false),
-        };
-
-        if (editing) {
-            router.put(update(editing.id).url, payload, options);
-        } else {
-            router.post(store().url, payload, options);
-        }
-    };
-
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                <DialogHeader>
-                    <DialogTitle>
-                        {editing ? 'Edit Menu' : 'Tambah Menu'}
-                    </DialogTitle>
-                    <DialogDescription>
-                        Menu tampil di sidebar tenant sesuai paket & permission.
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div className="grid gap-4">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                        <Field label="Kode" error={form.errors.code}>
-                            <Input
-                                value={form.data.code}
-                                onChange={(e) =>
-                                    form.setData('code', e.target.value)
-                                }
-                            />
-                        </Field>
-                        <Field label="Label" error={form.errors.label_default}>
-                            <Input
-                                value={form.data.label_default}
-                                onChange={(e) =>
-                                    form.setData(
-                                        'label_default',
-                                        e.target.value,
-                                    )
-                                }
-                            />
-                        </Field>
-                    </div>
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                        <Field label="Icon">
-                            <Selectable
-                                value={form.data.icon || NONE}
-                                onChange={(v) =>
-                                    form.setData('icon', v === NONE ? '' : v)
-                                }
-                                options={iconOptions}
-                                placeholder="Tanpa icon"
-                            />
-                        </Field>
-                        <Field label="Induk (Parent)">
-                            <Select
-                                value={form.data.parent_id}
-                                onValueChange={(v) =>
-                                    form.setData('parent_id', v)
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value={NONE}>
-                                        (Menu Utama)
-                                    </SelectItem>
-                                    {parents
-                                        .filter((p) => p.id !== editing?.id)
-                                        .map((p) => (
-                                            <SelectItem
-                                                key={p.id}
-                                                value={String(p.id)}
-                                            >
-                                                {p.label_default}
-                                            </SelectItem>
-                                        ))}
-                                </SelectContent>
-                            </Select>
-                        </Field>
-                    </div>
-
-                    <Field label="Route Name" error={form.errors.route_name}>
-                        <Input
-                            value={form.data.route_name}
-                            placeholder="mis. dashboard, roles.index"
-                            onChange={(e) =>
-                                form.setData('route_name', e.target.value)
-                            }
-                        />
-                    </Field>
-
-                    <div className="grid gap-2 sm:grid-cols-2">
-                        <Field label="Permission">
-                            <Selectable
-                                value={form.data.permission_code}
-                                onChange={(v) =>
-                                    form.setData('permission_code', v)
-                                }
-                                options={permissionOptions}
-                                placeholder="Tanpa permission"
-                            />
-                        </Field>
-                        <Field label="Feature (gate paket)">
-                            <Selectable
-                                value={form.data.feature_code}
-                                onChange={(v) =>
-                                    form.setData('feature_code', v)
-                                }
-                                options={featureOptions}
-                                placeholder="Selalu tersedia"
-                            />
-                        </Field>
-                    </div>
-
-                    <Field label="Urutan" error={form.errors.sort_order}>
-                        <Input
-                            type="number"
-                            value={form.data.sort_order}
-                            onChange={(e) =>
-                                form.setData(
-                                    'sort_order',
-                                    Number(e.target.value),
-                                )
-                            }
-                        />
-                    </Field>
-
-                    <div className="flex gap-6">
-                        <label className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                                checked={form.data.is_core}
-                                onCheckedChange={(c) =>
-                                    form.setData('is_core', c === true)
-                                }
-                            />
-                            Inti (tak bisa disembunyikan tenant)
-                        </label>
-                        <label className="flex items-center gap-2 text-sm">
-                            <Checkbox
-                                checked={form.data.is_active}
-                                onCheckedChange={(c) =>
-                                    form.setData('is_active', c === true)
-                                }
-                            />
-                            Aktif
-                        </label>
-                    </div>
-                </div>
-
-                <DialogFooter>
-                    <Button
-                        variant="outline"
-                        onClick={() => onOpenChange(false)}
-                    >
-                        Batal
-                    </Button>
-                    <Button onClick={submit} disabled={form.processing}>
-                        Simpan
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function Field({
-    label,
-    error,
-    children,
-}: {
-    label: string;
-    error?: string;
-    children: React.ReactNode;
-}) {
-    return (
-        <div className="grid gap-2">
-            <Label>{label}</Label>
-            {children}
-            {error && <p className="text-sm text-red-600">{error}</p>}
-        </div>
-    );
-}
-
-function Selectable({
-    value,
-    onChange,
-    options,
-    placeholder,
-}: {
-    value: string;
-    onChange: (value: string) => void;
-    options: string[];
-    placeholder: string;
-}) {
-    return (
-        <Select value={value} onValueChange={onChange}>
-            <SelectTrigger>
-                <SelectValue placeholder={placeholder} />
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value={NONE}>{placeholder}</SelectItem>
-                {options.map((option) => (
-                    <SelectItem key={option} value={option}>
-                        {option}
-                    </SelectItem>
-                ))}
-            </SelectContent>
-        </Select>
     );
 }

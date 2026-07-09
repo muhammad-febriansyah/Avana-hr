@@ -28,7 +28,7 @@ export function AppSidebar() {
     const { auth, menu } = usePage<SharedData>().props;
 
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <Sidebar collapsible="icon" variant="sidebar">
             <SidebarHeader>
                 <SidebarMenu>
                     <SidebarMenuItem>
