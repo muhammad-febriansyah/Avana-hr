@@ -139,6 +139,14 @@ class Employee extends Model
     }
 
     /**
+     * @return HasOne<EmployeeTermination, $this>
+     */
+    public function termination(): HasOne
+    {
+        return $this->hasOne(EmployeeTermination::class);
+    }
+
+    /**
      * Flag one branch assignment as primary, demoting any other.
      */
     public function setPrimaryBranch(int $branchId): void

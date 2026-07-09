@@ -5,11 +5,13 @@ use App\Http\Controllers\ApprovalFlowController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\CustomFieldController;
+use App\Http\Controllers\EmployeeAccountController;
 use App\Http\Controllers\EmployeeChangeRequestController;
 use App\Http\Controllers\EmployeeContractController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\EmployeeImportController;
 use App\Http\Controllers\EmployeeMovementController;
+use App\Http\Controllers\EmployeeTerminationController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
@@ -78,10 +80,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->scopeBindings()
         ->name('employees.contracts.download');
 
-    // Employee lifecycle: movements + data change requests (both via approval).
+    // Employee lifecycle: movements + change requests (approval), termination + ESS account.
     Route::middleware('can:employees.update')->group(function () {
         Route::post('employees/{employee}/movements', [EmployeeMovementController::class, 'store'])->name('employees.movements.store');
         Route::post('employees/{employee}/change-requests', [EmployeeChangeRequestController::class, 'store'])->name('employees.change-requests.store');
+        Route::post('employees/{employee}/terminations', [EmployeeTerminationController::class, 'store'])->name('employees.terminations.store');
+        Route::patch('employees/{employee}/terminations/clearance', [EmployeeTerminationController::class, 'clearance'])->name('employees.terminations.clearance');
+        Route::post('employees/{employee}/account', [EmployeeAccountController::class, 'store'])->name('employees.account.store');
     });
 
     // Keep the wildcard show route last so /employees/create resolves first.

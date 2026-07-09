@@ -164,6 +164,15 @@ class EmployeeController extends Controller
                 'bank_name' => $employee->bank_name,
                 'bank_account_name' => $employee->bank_account_name,
             ],
+            'termination' => ($termination = $employee->termination()->first()) === null ? null : [
+                'id' => $termination->id,
+                'type' => $termination->type,
+                'effective_date' => $termination->effective_date->toDateString(),
+                'reason' => $termination->reason,
+                'status' => $termination->status,
+                'clearance_completed_at' => $termination->clearance_completed_at?->toIso8601String(),
+            ],
+            'hasAccount' => $employee->user()->exists(),
             'audits' => $audits,
         ]);
     }

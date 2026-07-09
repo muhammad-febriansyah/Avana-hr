@@ -6,6 +6,8 @@ import {
     Pencil,
     Plus,
     Trash2,
+    UserMinus,
+    UserPlus,
 } from 'lucide-react';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/shared/confirm-dialog';
@@ -43,6 +45,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { formatDateTime } from '@/lib/format';
 import { dashboard } from '@/routes';
 import { edit, index } from '@/routes/employees';
+import { store as storeAccount } from '@/routes/employees/account';
 import { store as storeChangeRequest } from '@/routes/employees/change-requests';
 import {
     destroy as destroyContract,
@@ -51,6 +54,10 @@ import {
     update as updateContract,
 } from '@/routes/employees/contracts';
 import { store as storeMovement } from '@/routes/employees/movements';
+import {
+    clearance as clearanceTermination,
+    store as storeTermination,
+} from '@/routes/employees/terminations';
 
 type Employee = {
     id: number;
@@ -137,6 +144,15 @@ type Editable = {
     bank_account_name: string | null;
 };
 
+type Termination = {
+    id: number;
+    type: string;
+    effective_date: string;
+    reason: string | null;
+    status: string;
+    clearance_completed_at: string | null;
+};
+
 type Props = {
     employee: Employee;
     customFields: CustomField[];
@@ -145,7 +161,22 @@ type Props = {
     movementOptions: MovementOptions;
     changeRequests: ChangeRequest[];
     editable: Editable;
+    termination: Termination | null;
+    hasAccount: boolean;
     audits: Audit[];
+};
+
+const TERMINATION_TYPE_LABELS: Record<string, string> = {
+    resign: 'Resign',
+    phk: 'PHK',
+    pensiun: 'Pensiun',
+    meninggal: 'Meninggal',
+};
+
+const TERMINATION_STATUS_LABELS: Record<string, string> = {
+    pending: 'Menunggu',
+    cleared: 'Clearance Selesai',
+    completed: 'Selesai',
 };
 
 type Tab =
@@ -154,6 +185,7 @@ type Tab =
     | 'kontrak'
     | 'mutasi'
     | 'perubahan'
+    | 'terminasi'
     | 'payroll'
     | 'lainnya'
     | 'riwayat';
@@ -236,6 +268,8 @@ export default function EmployeeShow({
     movementOptions,
     changeRequests,
     editable,
+    termination,
+    hasAccount,
     audits,
 }: Props) {
     const { can } = usePermissions();
@@ -244,7 +278,18 @@ export default function EmployeeShow({
     const [dialogOpen, setDialogOpen] = useState(false);
     const [movementOpen, setMovementOpen] = useState(false);
     const [changeOpen, setChangeOpen] = useState(false);
+    const [terminationOpen, setTerminationOpen] = useState(false);
     const canManage = can('employees.update');
+
+    const provisionAccount = () =>
+        router.post(storeAccount(employee.id).url, {}, { preserveScroll: true });
+
+    const markClearance = () =>
+        router.patch(
+            clearanceTermination(employee.id).url,
+            {},
+            { preserveScroll: true },
+        );
 
     const optionName = (
         list: { id: number; name?: string; code?: string }[],
@@ -297,6 +342,7 @@ export default function EmployeeShow({
         { key: 'kontrak', label: 'Kontrak' },
         { key: 'mutasi', label: 'Mutasi' },
         { key: 'perubahan', label: 'Perubahan' },
+        { key: 'terminasi', label: 'Terminasi' },
         { key: 'payroll', label: 'Payroll' },
         { key: 'lainnya', label: 'Kehadiran & Cuti' },
         { key: 'riwayat', label: 'Riwayat' },
@@ -330,6 +376,12 @@ export default function EmployeeShow({
                                     : 'Nonaktif'
                             }
                         />
+                        {canManage && !hasAccount && employee.email && (
+                            <Button variant="outline" onClick={provisionAccount}>
+                                <UserPlus className="size-4" />
+                                Buat Akun ESS
+                            </Button>
+                        )}
                         {canManage && (
                             <Button asChild>
                                 <Link href={edit(employee.id).url}>
@@ -689,6 +741,89 @@ export default function EmployeeShow({
                         </div>
                     )}
 
+                    {tab === 'terminasi' && (
+                        <div className="flex flex-col gap-4">
+                            {termination === null ? (
+                                <>
+                                    {canManage && (
+                                        <div className="flex justify-end">
+                                            <Button
+                                                variant="destructive"
+                                                onClick={() =>
+                                                    setTerminationOpen(true)
+                                                }
+                                            >
+                                                <UserMinus className="size-4" />
+                                                Ajukan Terminasi
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <EmptyState
+                                        icon={UserMinus}
+                                        title="Belum ada terminasi"
+                                        description="Catat resign, PHK, pensiun, atau data terminasi lain di sini."
+                                    />
+                                </>
+                            ) : (
+                                <div className="max-w-2xl">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <StatusBadge
+                                            status={
+                                                termination.status ===
+                                                'completed'
+                                                    ? 'inactive'
+                                                    : 'pending'
+                                            }
+                                            label={
+                                                TERMINATION_STATUS_LABELS[
+                                                    termination.status
+                                                ] ?? termination.status
+                                            }
+                                        />
+                                        {canManage &&
+                                            termination.status !==
+                                                'completed' &&
+                                            termination.clearance_completed_at ===
+                                                null && (
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={markClearance}
+                                                >
+                                                    Tandai Clearance Selesai
+                                                </Button>
+                                            )}
+                                    </div>
+                                    <Row
+                                        label="Jenis"
+                                        value={
+                                            TERMINATION_TYPE_LABELS[
+                                                termination.type
+                                            ] ?? termination.type
+                                        }
+                                    />
+                                    <Row
+                                        label="Tanggal Efektif"
+                                        value={termination.effective_date}
+                                    />
+                                    <Row
+                                        label="Alasan"
+                                        value={termination.reason}
+                                    />
+                                    <Row
+                                        label="Exit Clearance"
+                                        value={
+                                            termination.clearance_completed_at
+                                                ? formatDateTime(
+                                                      termination.clearance_completed_at,
+                                                  )
+                                                : 'Belum'
+                                        }
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {tab === 'payroll' && (
                         <div className="max-w-2xl">
                             <Row label="Bank" value={employee.bank_name} />
@@ -769,7 +904,112 @@ export default function EmployeeShow({
                     editable={editable}
                 />
             )}
+
+            {canManage && (
+                <TerminationDialog
+                    open={terminationOpen}
+                    onOpenChange={setTerminationOpen}
+                    employeeId={employee.id}
+                />
+            )}
         </div>
+    );
+}
+
+function TerminationDialog({
+    open,
+    onOpenChange,
+    employeeId,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    employeeId: number;
+}) {
+    const form = useForm({
+        type: 'resign',
+        effective_date: '',
+        reason: '',
+    });
+
+    const submit = () => {
+        form.transform((d) => ({ ...d, reason: d.reason || null }));
+        form.post(storeTermination(employeeId).url, {
+            preserveScroll: true,
+            onSuccess: () => onOpenChange(false),
+        });
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Ajukan Terminasi</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label>Jenis</Label>
+                        <Select
+                            value={form.data.type}
+                            onValueChange={(v) => form.setData('type', v)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {Object.entries(TERMINATION_TYPE_LABELS).map(
+                                    ([value, label]) => (
+                                        <SelectItem key={value} value={value}>
+                                            {label}
+                                        </SelectItem>
+                                    ),
+                                )}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="tm-date">Tanggal Efektif</Label>
+                        <Input
+                            id="tm-date"
+                            type="date"
+                            value={form.data.effective_date}
+                            onChange={(e) =>
+                                form.setData('effective_date', e.target.value)
+                            }
+                        />
+                        {form.errors.effective_date && (
+                            <p className="text-sm text-red-600">
+                                {form.errors.effective_date}
+                            </p>
+                        )}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="tm-reason">Alasan</Label>
+                        <Input
+                            id="tm-reason"
+                            value={form.data.reason}
+                            onChange={(e) =>
+                                form.setData('reason', e.target.value)
+                            }
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        onClick={() => onOpenChange(false)}
+                    >
+                        Batal
+                    </Button>
+                    <Button
+                        variant="destructive"
+                        onClick={submit}
+                        disabled={form.processing}
+                    >
+                        Ajukan Terminasi
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 
