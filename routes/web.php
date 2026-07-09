@@ -14,6 +14,7 @@ use App\Http\Controllers\EmployeeMovementController;
 use App\Http\Controllers\EmployeeTerminationController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\LeaveRequestController;
 use App\Http\Controllers\LeaveTypeController;
 use App\Http\Controllers\OrganizationController;
 use App\Http\Controllers\OrgUnitController;
@@ -164,6 +165,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('schedules.generate');
 
     // Cuti (Fase 2.2)
+    Route::get('leave', [LeaveRequestController::class, 'index'])
+        ->middleware('can:leave.view')
+        ->name('leave.index');
+    Route::post('leave', [LeaveRequestController::class, 'store'])
+        ->middleware('can:leave.request')
+        ->name('leave.store');
+    Route::post('leave/{leaveRequest}/cancel', [LeaveRequestController::class, 'cancel'])
+        ->middleware('can:leave.request')
+        ->name('leave.cancel');
+
     Route::get('leave-types', [LeaveTypeController::class, 'index'])
         ->middleware('can:leave.view')
         ->name('leave-types.index');

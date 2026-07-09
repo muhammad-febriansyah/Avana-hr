@@ -71,6 +71,7 @@ class MenuSeeder extends Seeder
             ['code' => 'holidays', 'parent' => 'shift', 'label' => 'Hari Libur', 'route' => 'holidays.index', 'permission' => 'shift.view', 'sort' => 4],
 
             // Cuti submenu
+            ['code' => 'leave.mine', 'parent' => 'leave', 'label' => 'Pengajuan Cuti', 'route' => 'leave.index', 'permission' => 'leave.view', 'sort' => 1],
             ['code' => 'leave-types', 'parent' => 'leave', 'label' => 'Jenis Cuti', 'route' => 'leave-types.index', 'permission' => 'leave.view', 'sort' => 3],
 
             // Attendance submenu
